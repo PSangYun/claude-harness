@@ -1,0 +1,60 @@
+# SwiftLint — itandsy iOS 공통 기본 설정
+#
+# 도입 방법:
+#   1. 이 파일을 저장소 루트에 .swiftlint.yml 이름으로 복사
+#   2. swiftlint 설치: brew install swiftlint
+#   3. 확인: swiftlint lint --strict
+# 도입하면 stop-gate 훅과 /maintain이 자동으로 감지해 실행한다 (별도 설정 불필요).
+#
+# 기준: 크래시 경로(강제 언래핑 계열)는 error, 나머지는 기존 코드베이스에
+# 점진 적용 가능하도록 warning 위주. --strict 실행 시 warning도 실패로 취급된다.
+
+excluded:
+  - Pods
+  - DerivedData
+  - .build
+  - vendor
+
+opt_in_rules:
+  - force_unwrapping           # ! 언래핑 — 크래시 경로
+  - empty_count                # count == 0 대신 isEmpty
+  - first_where                # filter().first 대신 first(where:)
+  - contains_over_first_not_nil
+  - toggle_bool
+  - closure_spacing
+  - fatal_error_message
+  - unneeded_parentheses_in_closure_argument
+
+disabled_rules:
+  - trailing_whitespace        # 포맷터 영역
+  - todo                       # TODO는 /maintain이 트리아지 (린트로 막지 않음)
+
+force_unwrapping:
+  severity: error
+force_cast: error
+force_try: error
+
+line_length:
+  warning: 140
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+identifier_name:
+  min_length: 2
+  excluded: [id, x, y, vm, ok]
+
+function_body_length:
+  warning: 60
+  error: 120
+
+type_body_length:
+  warning: 300
+  error: 500
+
+file_length:
+  warning: 500
+  error: 1000
+
+nesting:
+  type_level: 2

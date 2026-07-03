@@ -1,0 +1,14 @@
+# ktlint가 읽는 코드 스타일 설정 — 저장소 루트에 .editorconfig 이름으로 복사
+# (도입 절차는 같은 폴더의 lint-setup.md 참조)
+root = true
+
+[*.{kt,kts}]
+charset = utf-8
+end_of_line = lf
+indent_size = 4
+insert_final_newline = true
+max_line_length = 140
+
+ktlint_code_style = android_studio
+# 컴포저블은 PascalCase 함수가 컨벤션이므로 함수 네이밍 검사에서 제외
+ktlint_function_naming_ignore_when_annotated_with = Composable
