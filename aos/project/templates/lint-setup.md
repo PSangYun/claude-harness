@@ -1,6 +1,7 @@
 # AOS ktlint 도입 가이드
 
-현재 aos-common·ParkGolfAOS는 린트가 없어 결정적 게이트가 `compileDebugKotlin`뿐이다.
+> **aos-common·ParkGolfAOS는 2026-07-03 도입 완료** (aos-common #11, ParkGolfAOS #29) — 이 문서는 신규 저장소 도입용.
+
 ktlint를 도입하면 **stop-gate 훅과 /maintain이 자동으로 감지해 `ktlintCheck`를 실행**한다 (훅 수정 불필요).
 
 ## 1. Gradle 플러그인 선언
@@ -10,27 +11,34 @@ ktlint를 도입하면 **stop-gate 훅과 /maintain이 자동으로 감지해 `k
 ```kotlin
 plugins {
     // ...기존 플러그인...
-    id("org.jlleitschuh.gradle.ktlint") version "12.1.1" apply false
+    id("org.jlleitschuh.gradle.ktlint") version "14.2.0" apply false
 }
 ```
 
-각 검사 대상 모듈(`app/build.gradle.kts`, `AosCommon/build.gradle.kts`)에 적용:
+각 검사 대상 모듈 `build.gradle.kts`의 `plugins` 블록에 적용 + 버전 고정:
 
 ```kotlin
 plugins {
     // ...기존 플러그인...
     id("org.jlleitschuh.gradle.ktlint")
 }
-```
 
-> 버전 카탈로그를 쓰는 프로젝트면 `gradle/libs.versions.toml`에 등록 후 `alias(libs.plugins.ktlint)`로 선언해도 된다.
+// ktlint — CLI/훅과 동일 버전 고정 (규칙 드리프트 방지)
+ktlint {
+    version.set("1.8.0")
+    android.set(true)
+}
+```
 
 ## 2. 스타일 설정
 
-같은 폴더의 `.editorconfig`를 저장소 루트에 복사한다. 핵심:
+같은 폴더의 `.editorconfig`를 저장소 루트에 복사한다. 핵심 결정 (도입된 두 저장소와 동일하게 유지할 것):
 
-- `ktlint_code_style = android_studio` — 안드로이드 스튜디오 기본 포맷과 일치
-- `ktlint_function_naming_ignore_when_annotated_with = Composable` — 컴포저블 PascalCase 허용 (100% Compose 프로젝트 필수)
+- `ktlint_code_style = android_studio` — IDE 기본 포맷과 일치
+- 컴포저블 PascalCase 허용 (`ktlint_function_naming_ignore_when_annotated_with = Composable`)
+- `max_line_length = off` — 도입 초기 소음 방지
+- **네이밍 계열 비활성** (property/backing-property/filename) — 이름·파일명 변경은 공개 API 파괴 위험이라 라이브러리 호환성 규칙이 우선
+- wildcard import·인자 옆 주석 계열 비활성 — Android Studio 기본 동작·팀 주석 습관 유지
 
 ## 3. 사용
 
@@ -41,7 +49,13 @@ plugins {
 
 ## 4. 기존 코드 일괄 정리 (도입 직후 1회)
 
-기존 코드베이스에 위반이 쌓여 있으면 첫 도입 시 게이트가 계속 차단된다.
-도입 커밋에서 `./gradlew ktlintFormat`을 1회 돌려 전체를 정리한 뒤 시작할 것 (기계적 포맷 변경만 발생 — 동작 변경 없음).
+기존 코드베이스에 위반이 쌓여 있으면 첫 도입 시 게이트가 계속 차단된다. 도입 커밋에서 전체 포맷을 1회 돌려 정리한 뒤 시작할 것 (기계적 포맷 변경만 — 동작 변경 없음):
 
-> detekt(정적 분석)까지 원하면 별도 도입 가능하나, 규칙 튜닝 비용이 있어 ktlint 정착 후 검토 권장. detekt를 선언하면 stop-gate가 마찬가지로 자동 감지한다.
+```bash
+./gradlew ktlintFormat        # 또는 SDK 없는 머신이면: brew install ktlint 후
+ktlint --format "app/src/**/*.kt" "*.gradle.kts" "**/*.gradle.kts"   # (1.8.0 — 플러그인 고정 버전과 일치)
+```
+
+⚠️ 전체 포맷 커밋은 열려 있는 작업 브랜치와 충돌한다 — 진행 중 브랜치가 정리된 시점에 머지하고, 이후 브랜치는 rebase 권장.
+
+> detekt(정적 분석)까지 원하면 별도 도입 가능 — 선언하면 stop-gate가 마찬가지로 자동 감지한다. ktlint 정착 후 검토 권장.
