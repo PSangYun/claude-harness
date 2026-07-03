@@ -1,13 +1,11 @@
-# SwiftLint — itandsy iOS 공통 기본 설정
+# SwiftLint — itandsy iOS 공통 기본 설정 (ios-common·ParkGolfIOS 2026-07-03 도입)
 #
-# 도입 방법:
-#   1. 이 파일을 저장소 루트에 .swiftlint.yml 이름으로 복사
-#   2. swiftlint 설치: brew install swiftlint
-#   3. 확인: swiftlint lint --strict
-# 도입하면 stop-gate 훅과 /maintain이 자동으로 감지해 실행한다 (별도 설정 불필요).
+# 신규 저장소 도입: 이 파일을 루트에 복사 + brew install swiftlint
+# stop-gate 훅과 /maintain이 자동 감지해 실행한다.
 #
-# 기준: 크래시 경로(강제 언래핑 계열)는 error, 나머지는 기존 코드베이스에
-# 점진 적용 가능하도록 warning 위주. --strict 실행 시 warning도 실패로 취급된다.
+# 철학: 크래시 경로(강제 언래핑 계열)는 error로 강제하고, 기존 코드 위반 지점은
+# `// swiftlint:disable:next ...` 주석으로 가시적 부채 표시 (신규 코드부터 강제).
+# 네이밍·길이·복잡도 규칙은 기존 코드 리팩토링을 강제하므로 도입 초기 비활성 — 정착 후 조이기.
 
 excluded:
   - Pods
@@ -27,34 +25,25 @@ opt_in_rules:
 
 disabled_rules:
   - trailing_whitespace        # 포맷터 영역
-  - todo                       # TODO는 /maintain이 트리아지 (린트로 막지 않음)
+  - todo                       # TODO는 /maintain이 트리아지
+  # ── 도입 초기 비활성 (기존 코드 리팩토링 강제 방지 — 정착 후 조이기) ──
+  - identifier_name            # 네이밍 변경은 공개 API 파괴 위험
+  - type_name                  # 동일
+  - line_length
+  - file_length
+  - type_body_length
+  - function_body_length
+  - function_parameter_count
+  - cyclomatic_complexity
+  - shorthand_operator
+  - for_where                  # 스타일 — 코드 변경 요구
+  - large_tuple                # 기존 코드 리팩토링 요구
+  - multiple_closures_with_trailing_closure
 
 force_unwrapping:
   severity: error
 force_cast: error
 force_try: error
-
-line_length:
-  warning: 140
-  error: 200
-  ignores_comments: true
-  ignores_urls: true
-
-identifier_name:
-  min_length: 2
-  excluded: [id, x, y, vm, ok]
-
-function_body_length:
-  warning: 60
-  error: 120
-
-type_body_length:
-  warning: 300
-  error: 500
-
-file_length:
-  warning: 500
-  error: 1000
 
 nesting:
   type_level: 2
