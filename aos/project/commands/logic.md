@@ -22,7 +22,7 @@ description: 2단계 — 디스크립션 기반 동작 로직 구현 (ViewModel 
 
 - 입력 검증, 상태 전이, 조건부 노출/비활성화 — 비즈니스 로직은 **VM에**, Content는 stateless 유지
 - 화면 전환은 `AppNavHost` 경유 (Screen의 네비게이션 콜백 연결)
-- 에러/빈 상태 처리 (기존 패턴·aos-common toast 등 공통 사용)
+- 에러/빈 상태 처리 (프로젝트 공통 toast/스낵바 등 기존 패턴 재사용)
 - Screen에서 `collectAsStateWithLifecycle`로 uiState 수집
 
 ## Phase D: 자가 확인

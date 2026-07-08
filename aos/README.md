@@ -7,8 +7,8 @@
 ```
 aos/
 ├── global/            # 팀원 각자의 ~/.claude/ 에 배치 — ./install.sh aos
-│   ├── CLAUDE.md      #   글로벌 규칙 + Android 전용 규칙 + 피그마 구현 워크플로우
-│   │                  #   + Figma→aos-common 컴포넌트·폰트·색상·Area 토큰 매핑
+│   ├── CLAUDE.md      #   글로벌 규칙 + Android 전용 규칙(@Keep·Compose Stability 등)
+│   │                  #   + 범용 Figma 파싱/구현 워크플로우
 │   ├── settings.json  #   SessionStart(inject-model-rules) 훅만 등록 — Stop 훅 없음 (아래 정책)
 │   ├── prompts/       #   모델별 운영 규칙 프롬프트 8종 (OPUS·SONNET 각 4종)
 │   ├── hooks/         #   stop-gate.js + inject-model-rules.js (SessionStart 시 모델에 맞는 prompts 판 주입)
@@ -16,13 +16,12 @@ aos/
 │   ├── templates/     #   프로젝트 씨딩 원본 — commands/{maintain,review-loop}
 │   │                  #   + workflows/{implement-feature,review-and-fix}
 │   └── agents/        #   checker · code-reviewer · smoke · test-writer
-├── project/           # 앱 저장소의 .claude/ 에 배치 (git 커밋 → 팀 배포 채널)
-│   ├── settings.json  #   Stop 훅 등록 — 유일한 등록 지점 (아래 정책 참조)
-│   ├── hooks/stop-gate.js      (글로벌과 동일 사본 — 드리프트 금지)
-│   ├── commands/      #   design · logic · connect-api · feature (DoD 포함)
-│   ├── workflows/     #   implement-feature · review-and-fix
-│   └── templates/     #   린트 도입 (.editorconfig + lint-setup.md)
-└── library/           # aos-common 저장소 전용 (component · publish — 앱 커맨드 대신 배치)
+└── project/           # 앱 저장소의 .claude/ 에 배치 (git 커밋 → 팀 배포 채널)
+    ├── settings.json  #   Stop 훅 등록 — 유일한 등록 지점 (아래 정책 참조)
+    ├── hooks/stop-gate.js      (글로벌과 동일 사본 — 드리프트 금지)
+    ├── commands/      #   design · logic · connect-api · feature (DoD 포함)
+    ├── workflows/     #   implement-feature · review-and-fix
+    └── templates/     #   린트 도입 (.editorconfig + lint-setup.md)
 ```
 
 ## 글로벌 Stop 훅 미등록 정책 (web/ios와 다름)

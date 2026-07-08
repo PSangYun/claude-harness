@@ -132,8 +132,8 @@ const reviewDefs = [
     prompt:
       `아래 "리뷰 대상 파일"에서 컨벤션 위반만 스캔해라. 각 파일을 Read로 읽되, \`git diff ${base} -- <파일>\`의 변경 hunk를 함께 확인해 이번 변경분의 위반 위주로 지적해라. ` +
       `변경과 무관하게 원래 있던 기존 코드 위반은 preexisting:true로 표시해라(자동 수정 대상에서 제외되고 보고만 된다). ` +
-      `프로젝트 CLAUDE.md의 "핵심 규칙"·"반복되는 실수" 섹션(그리고 있으면 .claude/hooks/quality-check.js의 검사 항목)을 기준으로: ` +
-      `aos-common 컴포넌트 재구현, 색상/치수 하드코딩(ui/theme 토큰 미사용), Screen→Content→Preview 구조 위반, collectAsState 사용, Log.d·println 잔존, XML 레이아웃 추가 등. ` +
+      `프로젝트 CLAUDE.md의 "핵심 규칙"·"반복되는 실수" 섹션(그리고 있으면 .claude/hooks/quality-check.js의 검사 항목)에 정의된 컨벤션 위반만 스캔해라 ` +
+      `(예: 공용 컴포넌트 재구현, 색상/치수 하드코딩(테마 토큰 미사용), 프로젝트가 정한 화면 계층 구조 위반, 로깅(Log.d·println) 잔존, XML 레이아웃 추가 등 — 구체 기준은 프로젝트 CLAUDE.md를 따른다). ` +
       `각 위반은 file/line/severity/description으로 반환. 문제 없으면 빈 배열.\n\n리뷰 대상 파일: ${fileList}`,
   },
 ];

@@ -10,10 +10,10 @@ description: 프로젝트를 루프 하네스에 편입 — CLAUDE.md 생성/검
 
 1. 빌드 시스템 파악: `settings.gradle.kts`의 모듈 목록, `gradle/libs.versions.toml`(AGP/Kotlin/Compose 버전), gradle wrapper 유무
 2. 검증 수단 파악: ktlint/detekt/spotless 선언 유무, 실질 테스트 유무(Example* 템플릿 제외), `.github/workflows/` 유무
-3. 빌드 전제조건 파악: `local.properties` 요구사항 (GPR 자격증명, 서명 키, 소셜 로그인 키) — **없으면 어떤 태스크까지 가능한지** 확인
+3. 빌드 전제조건 파악: `local.properties` 요구사항 (사설 저장소 자격증명(예: GitHub Packages), 서명 키, 소셜 로그인 키 등) — **없으면 어떤 태스크까지 가능한지** 확인
 4. 실제 구조 파악: 주요 패키지 트리(2~3단계), 아키텍처(MVVM/Hilt/레이어링), git 브랜치(`git branch -a`)
 5. 기존 `.claude/` 자산 확인: commands, agents, hooks, settings, workflows
-6. 공통 라이브러리 소비 확인: `aos-common` 의존 버전 ↔ 라이브러리 최신 버전 ↔ `AOS_COMMON_GUIDE.md` 사본 버전 3자 비교 — 드리프트 발견 시 보고
+6. 공통 UI 라이브러리 소비 확인(있으면): 라이브러리 의존 버전 ↔ 최신 배포 버전 ↔ 로컬 가이드 사본 버전 3자 비교 — 드리프트 발견 시 보고. 공용 라이브러리를 안 쓰면 이 항목 생략
 
 ## Phase 2: CLAUDE.md 생성 또는 검증
 
@@ -21,10 +21,10 @@ description: 프로젝트를 루프 하네스에 편입 — CLAUDE.md 생성/검
   - 프로젝트 개요 (모듈, SDK 버전, 주요 의존성)
   - 빌드·검증 명령 (정확한 Gradle 태스크 — 모듈명 실측값)
   - 아키텍처 (패키지 구조, 레이어 규칙, Screen/Content/Preview 컨벤션)
-  - 핵심 규칙 (aos-common 재사용, 테마 토큰, 공개 API 변경 절차)
+  - 핵심 규칙 (공용 UI 라이브러리 재사용(있으면), 테마 토큰, 공개 API 변경 절차)
   - `## 프로젝트 루브릭`
   - `## 반복되는 실수` (승격 규약 주석 포함)
-- **CLAUDE.md가 있으면** (aos-common·ParkGolfAOS는 이미 있음): 실제 프로젝트와 대조해 불일치를 전부 보고:
+- **CLAUDE.md가 있으면**: 실제 프로젝트와 대조해 불일치를 전부 보고:
   - 패키지 구조 설명 ↔ 실제 구조
   - Git 브랜치 설명 ↔ 실제 브랜치
   - 명령어 ↔ 실제 Gradle 태스크/모듈명

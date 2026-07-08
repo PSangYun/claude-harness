@@ -6,10 +6,10 @@
  * 검증(compileDebugKotlin / ktlint·detekt 설정 시)만 자동 감지해 실행하고, 실패 시
  * 턴 종료를 차단(block)하여 Claude가 스스로 수정하게 만든다.
  *
- * 설계 원칙 (웹팀 stop-gate.js와 동일 골격):
+ * 설계 원칙:
  * - 범용: settings.gradle(.kts)의 모듈을 파싱해 변경된 모듈만 컴파일. 비 Gradle 프로젝트는 무시
  * - 크로스플랫폼: Windows(git-bash 개발 환경)에서는 gradlew.bat, macOS/Linux에서는 ./gradlew
- * - fail-open: 훅 자체 오류·인프라 문제(GPR 자격증명 부재 등)로는 절대 차단하지 않음 (exit 0)
+ * - fail-open: 훅 자체 오류·인프라 문제(사설 저장소 자격증명 부재 등)로는 절대 차단하지 않음 (exit 0)
  * - 단, fail-open으로 인한 스킵은 "조용히" 넘어가지 않고 systemMessage로 가시화한다
  * - 무한 루프 방지: 차단 후 재진입(stop_hook_active) 시에도 수정본을 재검증하되,
  *   같은 턴 체인에서 3회 초과 차단이면 fail-open (Claude Code 자체 상한 8회보다 먼저 멈춤)

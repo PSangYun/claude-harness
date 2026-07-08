@@ -1,6 +1,6 @@
 # AOS ktlint 도입 가이드
 
-> **aos-common·ParkGolfAOS는 2026-07-03 도입 완료** (aos-common #11, ParkGolfAOS #29) — 이 문서는 신규 저장소 도입용.
+> 이 문서는 신규 저장소에 ktlint를 처음 도입할 때 사용한다.
 
 ktlint를 도입하면 **stop-gate 훅과 /maintain이 자동으로 감지해 `ktlintCheck`를 실행**한다 (훅 수정 불필요).
 
@@ -32,12 +32,12 @@ ktlint {
 
 ## 2. 스타일 설정
 
-같은 폴더의 `.editorconfig`를 저장소 루트에 복사한다. 핵심 결정 (도입된 두 저장소와 동일하게 유지할 것):
+같은 폴더의 `.editorconfig`를 저장소 루트에 복사한다. 핵심 결정:
 
 - `ktlint_code_style = android_studio` — IDE 기본 포맷과 일치
 - 컴포저블 PascalCase 허용 (`ktlint_function_naming_ignore_when_annotated_with = Composable`)
 - `max_line_length = off` — 도입 초기 소음 방지
-- **네이밍 계열 비활성** (property/backing-property/filename) — 이름·파일명 변경은 공개 API 파괴 위험이라 라이브러리 호환성 규칙이 우선
+- **네이밍 계열 비활성** (property/backing-property/filename) — 라이브러리처럼 공개 API를 배포하는 저장소는 이름·파일명 변경이 파괴적이므로 비활성 (앱 전용 저장소는 선택)
 - wildcard import·인자 옆 주석 계열 비활성 — Android Studio 기본 동작·팀 주석 습관 유지
 
 ## 3. 사용

@@ -13,7 +13,7 @@ tools:
 ## 절차 (이것만)
 
 1. **빌드**: `./gradlew -q assembleDebug` (Windows PowerShell/cmd면 `.\gradlew.bat`, Git Bash면 `./gradlew` 그대로; `.claude/stop-gate.json`에 build 명령이 있으면 그것을 우선 사용)
-   - 실패 출력이 `401 Unauthorized`/`Could not resolve com.itappandsy...`면 GPR 자격증명 문제 — `ran: false`, note에 "환경 문제(GPR)"로 보고하고 종료
+   - 실패 출력이 `401 Unauthorized`/`Could not resolve <사설 아티팩트 좌표>`(비공개 패키지 저장소 자격증명 미설정)면 환경 문제 — `ran: false`, note에 "환경 문제(자격증명)"로 보고하고 종료
    - 코드 문제로 실패면 `pass: false`, 에러 요약을 반환하고 종료
 2. **실행 확인 (연결된 기기/에뮬레이터가 이미 있을 때만)**:
    - `adb devices`로 연결 확인. **없으면 임의로 에뮬레이터를 띄우지 말고** 빌드 결과까지만 보고 (`note`에 "연결된 기기 없음 — 빌드까지만 검증").
@@ -28,7 +28,7 @@ tools:
 - `build`: 빌드 성공 여부
 - `launch`: 실행 확인 결과 ("ok" | "crash" | "skipped")
 - `errors`: 빌드 에러/크래시 요약 목록 (없으면 빈 배열)
-- `note`: 특이사항 한 줄 (기기 없음, GPR 환경 문제 등)
+- `note`: 특이사항 한 줄 (기기 없음, 자격증명 환경 문제 등)
 
 ## 금지
 

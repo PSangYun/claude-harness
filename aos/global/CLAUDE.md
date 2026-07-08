@@ -90,7 +90,7 @@ data class SomeModel(
 
 ## 패키지 구조 규칙
 
-새 파일 생성 시 반드시 아래 패키지 위치를 준수한다.
+새 파일 생성 시 아래 패키지 위치를 준수한다. (프로젝트마다 구조가 다르면 프로젝트 CLAUDE.md의 규칙을 우선한다.)
 
 | 파일 종류 | 패키지 위치 |
 |---|---|
@@ -103,52 +103,10 @@ data class SomeModel(
 
 ## 안전영역 (Safe Area) 처리
 
-`WindowCompat.setDecorFitsSystemWindows(window, false)`로 edge-to-edge가 활성화되어 있으므로, **스플래시 화면(FirstScreen)을 제외한 모든 화면의 루트 컴포저블에 `statusBarsPadding()`을 반드시 적용한다.**
+`WindowCompat.setDecorFitsSystemWindows(window, false)`로 edge-to-edge가 활성화되어 있으면, **스플래시 화면을 제외한 모든 화면의 루트 컴포저블에 `statusBarsPadding()`을 반드시 적용한다.**
 
 - 하단 네비게이션 바가 있는 화면은 `navigationBarsPadding()`도 추가
 - 스플래시는 배경색이 전체를 채우므로 예외
-
-## CommonTopNavigation scroll 파라미터 (필수)
-
-`CommonTopNavigation`의 `scroll` 파라미터는 **스크롤 가능 여부**로 판단한다. 현재 스크롤 위치(`scrollState.value`)를 사용하면 안 된다.
-
-```kotlin
-// ❌ 잘못된 방식 — 스크롤 위치 기반 (최상단에서 divider 미표시)
-val isScrolled by remember { derivedStateOf { scrollState.value > 0 } }
-
-// ✅ 올바른 방식 — 스크롤 가능 여부 기반
-val isScrolled by remember { derivedStateOf { scrollState.maxValue > 0 && scrollState.maxValue != Int.MAX_VALUE } }
-```
-
-- `Int.MAX_VALUE` 체크는 스크롤 상태가 아직 측정되지 않은 초기 상태를 제외하기 위함
-- inline으로 쓸 때도 동일: `scroll = scrollState.maxValue > 0 && scrollState.maxValue != Int.MAX_VALUE`
-
-## BottomSheet Preview 구조
-
-`ModalBottomSheet`은 Preview를 지원하지 않으므로, **반드시 `BottomSheetContent`를 직접 사용**해야 X버튼을 포함한 전체 UI가 Preview에 표시된다.
-
-```kotlin
-@Preview(showBackground = true)
-@Composable
-fun XxxBottomSheetPreview() {
-    AppTheme {
-        val offsetY = remember { Animatable(0f) }
-        BottomSheetContent(
-            title = "바텀시트 제목",
-            fixed = false,
-            scrollDivider = false,
-            actions = { XxxBottomSheetActions(onConfirm = {}, onDismiss = {}) },
-            offsetY = offsetY,
-            onClose = {}
-        ) {
-            XxxBottomSheetBody()
-        }
-    }
-}
-```
-
-- `BottomSheetDialog` 대신 `BottomSheetContent`를 사용해야 X버튼, 드래그 제스처 등이 Preview에 보인다
-- `remember { Animatable(0f) }`로 offsetY를 Preview에서 생성한다
 
 ## Compose Modifier 순서 규칙 — drawBehind와 background
 
@@ -167,7 +125,7 @@ fun XxxBottomSheetPreview() {
 ```
 
 - border나 overlay 효과를 `drawBehind`로 구현할 때는 반드시 `background` **뒤에** 배치한다
-- shadow(`drawBehind`로 구현)는 `clip` **앞에** 배치해야 클리핑 밖으로 그려진다 (TaxCalculationScreen의 resultCardShadow 패턴)
+- shadow(`drawBehind`로 구현)는 `clip` **앞에** 배치해야 클리핑 밖으로 그려진다
 
 ## 리소스 파일 수정 전 사용처 확인
 
@@ -178,71 +136,23 @@ fun XxxBottomSheetPreview() {
 ## 아이콘 처리
 
 - 피그마에서 아이콘 구현 시 **반드시 피그마 API로 SVG를 직접 가져와** `app/src/main/res/drawable/ic_*.xml`로 생성
-- aos-common에 동일 이름의 아이콘이 있어도 **절대 사용하지 않는다** (디자인이 다를 수 있음)
-- 항상 `R.drawable.ic_<name>` 사용, `AosR.drawable.*` 아이콘 사용 금지
-
-# aos-common — 피그마 디자인 시스템 ↔ 코드 매핑
-
-- 저장소: `github.com/itandsy/aos-common` — GitHub Packages 배포 `com.itappandsy:aos-common` (모듈 `:AosCommon`, namespace `com.itappandsy.aoscommon`)
-- 피그마 파일: `D-펫포션_디자인 시스템` (fileKey: `b40fvavILA2SJpQkH9lZO9`)
-
-> 피그마 MCP로 디자인을 가져올 때, aos-common의 기존 컴포넌트를 먼저 확인하여 사용할 것.
-> **새 컴포넌트를 만들지 말고**, 기존 컴포넌트를 import하여 사용할 것.
-> **API 확인은 소스 탐색보다 `AOS_COMMON_GUIDE.md`를 먼저 볼 것** (사용처 저장소에 사본이 있음 — 단, 사본 버전이 라이브러리 최신과 다를 수 있으니 버전 표기를 확인).
-
-## aos-common 자동 사용 (필수)
-
-피그마 디자인 구현 요청을 받으면 **구현 시작 전에 반드시** 다음을 확인한다.
-
-1. 프로젝트의 `build.gradle` 또는 `build.gradle.kts`에서 `aos-common` 의존성 포함 여부를 grep으로 확인한다
-2. **aos-common이 연동되어 있으면** 사용자가 별도로 언급하지 않아도 아래 매핑 테이블의 컴포넌트를 우선 사용한다
-3. aos-common이 없는 프로젝트에서만 직접 구현한다
-
-```
-# 확인 명령 예시
-grep -r "aos-common\|aoscommon\|itappandsy" app/build.gradle* settings.gradle*
-```
-
-## 컴포넌트 탐색 규칙
-
-aos-common은 피그마 디자인 시스템과 동일한 아토믹 구조를 따른다 (`com.itappandsy.aoscommon.common` 하위):
-
-```
-component/
-├── atoms/      — avatar, badge, button, category/{chip, segment, tabs},
-│                 check, checkbox, decorate, divider, icon, indicator,
-│                 label, radio, scrollbar, switch, thumbnail, toast,
-│                 toggle, tooltip
-├── molecules/  — actions, keyboard, login, navigation, textBox
-└── organisms/  — bottomsheet, dialog, list
-ui/theme/       — Area.kt(간격), Color.kt(색상 토큰), Font.kt, Opacity.kt
-```
-
-- 피그마 컴포넌트 `Button/...` → `component/atoms/button/` 안의 기존 구현을 먼저 확인
-- 색상 hex·치수 하드코딩 금지 — `ui/theme`의 토큰 사용 (초기화는 `initPrimaryColor` 등 가이드 참조)
-
-## 배포·소비 방식 주의 (공개 API 변경 시)
-
-- **공개 API(컴포저블 파라미터) 변경은 반드시 사용자 확인 후 진행** — 소비 앱이 버전 고정으로 쓰므로 파괴적 변경은 업그레이드를 막는다.
-- 라이브러리 수정 후 배포 절차: 버전 갱신 → `AOS_COMMON_GUIDE.md` 갱신 → `./gradlew :AosCommon:publishReleasePublicationToGitHubPackagesRepository` → `feat: x.y.z publish` 커밋 (aos-common CLAUDE.md의 Publish 절차 준수)
-- 소비 앱(예: ParkGolfAOS)은 `implementation("com.itappandsy:aos-common:x.y.z")` 버전 고정 — 라이브러리 publish 후 **앱의 버전과 가이드 사본을 함께 갱신**해야 드리프트가 안 생긴다.
-- 빌드에는 GitHub Packages 자격증명 필요: `local.properties`의 `gpr.user`/`gpr.key` (또는 env `GPR_USER`/`GPR_KEY`) — 없으면 sync 자체가 실패한다.
+- 공용 UI 라이브러리에 동일 이름의 아이콘이 있어도 **디자인이 다를 수 있으니 그대로 쓰지 않는다** — 피그마 원본을 우선한다
+- 항상 프로젝트 `R.drawable.ic_<name>`를 사용한다
 
 # 피그마 구현 워크플로우
 
 ## 피그마 API 호출
 
-- 토큰: 환경변수 `$FIGMA_TOKEN` 사용 (settings.json에 설정됨)
+- 토큰: 환경변수 `$FIGMA_TOKEN`이 설정돼 있으면 사용한다. 없으면 사용자에게 토큰 설정(settings.json의 env 또는 셸 환경변수)을 안내한다
 - API 호출 시 헤더: `X-Figma-Token: $FIGMA_TOKEN`
-- 별도로 토큰을 물어보지 않는다
 
 ## 구현 전 기존 코드 참조 필수
 
 새 화면이나 컴포넌트를 구현하기 **전에 반드시** 프로젝트 내 기존 구현 코드를 먼저 확인한다.
 
-1. 동일하거나 유사한 컴포넌트(예: PointCard, LottoBall, BannerCard)가 다른 화면에 이미 구현되어 있는지 grep으로 확인
+1. 동일하거나 유사한 컴포넌트(예: 카드·리스트 아이템·배너 등)가 다른 화면에 이미 구현되어 있는지 grep으로 확인
 2. 있으면 **동일한 색상 토큰·스타일을 그대로 재사용** (Figma 에이전트 분석보다 기존 코드를 우선 신뢰)
-3. 특히 `bannerBlue`, `primaryNormal` 등 **프로젝트 커스텀 토큰**은 CLAUDE.md 매핑 테이블에 없으므로 반드시 기존 코드에서 확인
+3. 특히 프로젝트 커스텀 색·스타일 토큰은 아래 파싱 규칙만으로는 알 수 없으므로 반드시 기존 코드에서 확인한다
 
 ```
 # 예시: 유사 컴포넌트 기존 구현 확인
@@ -257,7 +167,7 @@ grep -r "ComponentName\|tokenName" app/src/main/java/
 - cornerRadius 수치
 - 컴포넌트 내부 자식 요소의 크기
 
-예: `GiftScreen`에서 아이콘이 20dp라도, `GiftExchangeScreen`의 동일 아이콘이 24dp일 수 있다. 기존 코드 값을 그대로 옮기면 안 된다.
+예: A 화면에서 아이콘이 20dp라도, B 화면의 동일 아이콘이 24dp일 수 있다. 기존 코드 값을 그대로 옮기면 안 된다.
 
 ## Figma 파싱 필수 규칙
 
@@ -277,9 +187,9 @@ grep -r "ComponentName\|tokenName" app/src/main/java/
 - fill의 `boundVariables.color.id`가 있으면 **반드시 해당 변수 ID로 Figma Variables API를 호출하여 변수명을 확인한다**
   - 조회 방법: `GET /v1/files/:file_key/variables/:variable_id` 또는 `GET /v1/files/:file_key/nodes?ids=<variable_node_id>`
   - 응답의 `name` 필드(예: `Label/Neutral`, `Label/Alternative`)를 확인한다
-  - 확인한 변수명 → 토큰 매핑 테이블에서 aos-common 토큰으로 변환 (예: `Label/Neutral` → `labelNeutral`)
-- **🚫 절대 금지 — 아래 행위는 CLAUDE.md 규칙 위반이다:**
-  - RGB 수치(rgba 값)만 보고 토큰을 추측하는 것 (`r=0.18, g=0.18` → `labelAlternative` 같은 추측)
+  - 확인한 변수명 → 프로젝트/디자인시스템의 대응 토큰으로 변환한다
+- **🚫 절대 금지 — 아래 행위는 규칙 위반이다:**
+  - RGB 수치(rgba 값)만 보고 토큰을 추측하는 것
   - 이전 화면에서 같은 rgba 값을 봤다고 동일 토큰으로 가정하는 것
   - API 조회 없이 에이전트가 자체 판단으로 토큰명을 결정하는 것
 - Figma 에이전트에게 분석을 요청할 때 **반드시 프롬프트에 명시한다**: "boundVariables.color.id가 있는 모든 노드에 대해 Figma Variables API를 호출하여 변수명을 확인한 후 토큰을 매핑하라"
@@ -289,6 +199,7 @@ grep -r "ComponentName\|tokenName" app/src/main/java/
 **텍스트 스타일 ID — 화면(노드)별 개별 확인**
 - 하나의 화면 데이터만 분석하고 다른 화면에 동일한 스타일을 가정하지 않는다
 - 텍스트 노드의 `styles.text` ID는 화면마다 다를 수 있으므로 구현 대상 화면의 노드를 직접 조회한다
+- 조회한 노드의 `name`에서 스타일명(예: `Heading 5/Regular`)을 확인해 프로젝트의 대응 타이포 토큰으로 매핑한다. 수치(`fontSize`/`fontWeight`)로 토큰을 추측하지 않는다
 
 **텍스트 노드 lineTypes**
 - 텍스트 노드에 `lineTypes` 필드가 있으면 반드시 확인한다
@@ -327,257 +238,3 @@ grep -r "ComponentName\|tokenName" app/src/main/java/
 - Step 1 또는 Step 2에서 불일치가 발견되면 사용자에게 묻지 않고 즉시 수정한다
 - 수정 후 Step 1부터 재검증한다
 - 모든 항목이 일치할 때만 "완료"로 마무리한다
-
-# Figma → aos-common 컴포넌트 매핑
-
-피그마에서 아래 컴포넌트 이름이 보이면 반드시 aos-common의 대응 컴포넌트를 사용한다.
-
-**⚠️ 절대 규칙: 직접 구현 전에 반드시 아래 매핑 테이블을 먼저 확인한다.**
-- 피그마 노드의 컴포넌트 이름을 그대로 테이블에서 찾는다
-- "이건 라디오 버튼이다", "이건 다른 패턴이다" 등 임의로 재해석하지 않는다
-- 테이블에 없을 때만 직접 구현을 고려한다
-- 버튼 순서·텍스트가 디자인과 달라도 매핑 컴포넌트를 우선 사용한다 (직접 구현 금지)
-
-**🚫 Figma 에이전트 출력을 그대로 신뢰 금지**
-- Figma 에이전트가 내부 구조(`CommonSolidButton`, `TextButton` 등)를 분해해서 보고하더라도, **코드 작성 전에 반드시 부모 컴포넌트 이름을 매핑 테이블과 먼저 대조한다**
-- 에이전트가 "메인 버튼 → CommonSolidButton, 서브 버튼 → TextButton"으로 분해했어도, 피그마 노드 이름이 `Actions/Buttons`이면 → `ActionsButtons`를 사용한다
-- 에이전트 출력은 참고용이고, 매핑 테이블이 최우선이다
-
-## Navigation
-
-| Figma | aos-common |
-|---|---|
-| `Navigation/Top Navigation` (Variant: Title Back / Title Close / Logo / TextField) | `CommonTopNavigation(navigationType=TITLEBACK/TITLECLOSE/LOGO/TEXTFIELD)` |
-
-## Atoms - Button
-
-| Figma | aos-common |
-|---|---|
-| `Button/Solid` (Large/Medium/Small, Primary/Secondary/Assistive) | `CommonSolidButton(size=LARGE/MEDIUM/SMALL)` |
-| `Button/Outlined` (Large/Medium/Small, Primary/Secondary/Assistive) | `CommonOutlinedButton(size=LARGE/MEDIUM/SMALL, backgroundColor, cornerRadius)` |
-| `Button/Text List` | `CommonTextListButton` |
-| `Button/Text` | `TextButton` |
-
-## Atoms - Icon
-
-| Figma | aos-common |
-|---|---|
-| `Button/Icon/Normal` / `Icon/Normal/*` | `IconNoraml(icon, size, color, onClick)` |
-| `Button/Icon/Outlined` | `IconOutlined` |
-| `Button/Icon/Background` | `IconBackground` |
-
-## Atoms - Label / Badge / Chip / Segment / Switch / Divider
-
-| Figma | aos-common |
-|---|---|
-| `Label` (XSmall/Small/Medium, Outlined/Filled, Neutral/Accent) | `CommonLabel(labelSize, labelType, labelColor)` |
-| `Badge/Push` (Dot/New/Number, Default/Red) | `Badge(variant, color)` |
-| `Category/Chip` (Medium/Small, Outline/Select) | `CommonChip(size, variant, rightIcon)` |
-| `Category/Segment` | `CommonSegment` |
-| `Basic/Divider` | `CommonDivider(variant=Normal/Thick)` |
-| `Toggle/Switch` | `CommonSwitch` |
-
-## Atoms - CheckBox
-
-| Figma | aos-common |
-|---|---|
-| `Input/Checkbox` (Square, with label text) | `InputCheckBox(size=Small/Medium/Large, text, checked)` |
-| `Input/CheckBox` (Round, with label text) | `InputRoundCheckBox` |
-| `CheckBox` (Square, standalone) | `CommonCheckBox` |
-| `CheckBox` (Round, standalone) | `CommonRoundCheckBox` |
-
-## Molecules
-
-| Figma | aos-common |
-|---|---|
-| `Actions/Buttons` (Strong/Neutral/Compact) | `ActionsButtons(priority=Strong/Neutral)` / `ActionsCompactButton` |
-| `Input/Text Field` | `CommonTextField(size, state)` |
-| `Input/Text Box` | `CommonTextBox` |
-| `Login/Buttons` | `LoginButtons(onKakaoClick, onNaverClick, onGoogleClick)` |
-
-## Organisms
-
-| Figma | aos-common |
-|---|---|
-| `Dialog` | `CommonDialog` |
-| `Bottom Sheet` | `BottomSheetDialog` / `BottomSheetContent` |
-| `List/Select Button` | `CommonListSelectBtn` |
-
-## 폰트 토큰 (Font.kt)
-
-피그마에서 텍스트 스타일명이 보이면 아래 aos-common 토큰을 사용한다. Bold=SemiBold(600), Medium=Medium(500), Regular=Regular(400).
-
-**⚠️ 폰트 토큰 파싱 규칙: Figma API 텍스트 노드에서 `fontSize`/`fontWeight` 수치를 직접 쓰지 않는다.**
-1. 텍스트 노드의 `styles.text` 필드가 있으면 해당 스타일 ID로 추가 API 조회를 반드시 한다.
-2. 조회한 노드의 `name`에서 스타일명(예: `Heading 5/Regular`)을 확인한다.
-3. 아래 테이블에서 매핑하여 aos-common 토큰(`heading5Regular`)을 `style =` 파라미터에 사용한다.
-4. `styles.text`가 없을 때만 수치 직접 사용을 고려한다.
-
-**🚫 절대 금지: 수치 추측 매핑**
-- `14px + Medium` → `body2NormalMedium` 같은 추측 금지 (실제로는 `label1NormalMedium`일 수 있음)
-- `22px + SemiBold` → `heading3Bold` 같은 추측 금지 (실제로는 `heading4Bold`일 수 있음)
-- 수치가 같아도 스타일명이 다르면 다른 토큰이다. 반드시 style ID 조회 후 매핑한다.
-
-| Figma 스타일 | aos-common (Bold / Medium / Regular) |
-|---|---|
-| `Display1` | `display1Bold` / `display1Medium` / `display1Regular` |
-| `Display2` | `display2Bold` / `display2Medium` / `display2Regular` |
-| `Heading1` | `heading1Bold` / `heading1Medium` / `heading1Regular` |
-| `Heading2` | `heading2Bold` / `heading2Medium` / `heading2Regular` |
-| `Heading3` | `heading3Bold` / `heading3Medium` / `heading3Regular` |
-| `Heading4` | `heading4Bold` / `heading4Medium` / `heading4Regular` |
-| `Heading5` | `heading5Bold` / `heading5Medium` / `heading5Regular` |
-| `Subtitle1` | `subtitle1Bold` / `subtitle1Medium` / `subtitle1Regular` |
-| `Subtitle2` | `subtitle2Bold` / `subtitle2Medium` / `subtitle2Regular` |
-| `Body1/Normal` | `body1NormalBold` / `body1NormalMedium` / `body1NormalRegular` |
-| `Body1/Reading` | `body1ReadingBold` / `body1ReadingMedium` / `body1ReadingRegular` |
-| `Body2/Normal` | `body2NormalBold` / `body2NormalMedium` / `body2NormalRegular` |
-| `Body2/Reading` | `body2ReadingBold` / `body2ReadingMedium` / `body2ReadingRegular` |
-| `Label1/Normal` | `label1NormalBold` / `label1NormalMedium` / `label1NormalRegular` |
-| `Label1/Reading` | `label1ReadingBold` / `label1ReadingMedium` / `label1ReadingRegular` |
-| `Label2` | `label2Bold` / `label2Medium` / `label2Regular` |
-| `Caption1` | `caption1Bold` / `caption1Medium` / `caption1Regular` |
-| `Caption2` | `caption2Bold` / `caption2Medium` / `caption2Regular` |
-| `Caption3` | `caption3Bold` / `caption3Medium` / `caption3Regular` |
-
-## 색상 토큰 (Color.kt)
-
-피그마에서 색상 변수명이 보이면 아래 aos-common 토큰을 사용한다. 색상 하드코딩 금지.
-
-**Primary**
-
-| Figma 토큰 | aos-common |
-|---|---|
-| `Primary/Normal` | `primaryNormal` (앱 시작 시 `initPrimaryColor(hex)`로 설정) |
-| `Primary/Strong` | `primaryStrong` |
-| `Primary/Heavy` | `primaryHeavy` |
-
-**Label**
-
-| Figma 토큰 | aos-common |
-|---|---|
-| `Label/Normal` | `labelNormal` |
-| `Label/Strong` | `labelStrong` |
-| `Label/Neutral` | `labelNeutral` |
-| `Label/Alternative` | `labelAlternative` |
-| `Label/Assistive` | `labelAssistive` |
-| `Label/Disable` | `labelDisable` |
-
-**Line**
-
-| Figma 토큰 | aos-common |
-|---|---|
-| `Line/Normal/Normal` | `lineNormalNormal` |
-| `Line/Normal/Neutral` | `lineNormalNeutral` |
-| `Line/Normal/Alternative` | `lineNormalAlternative` |
-| `Line/Normal/Strong` | `lineNormalStrong` |
-| `Line/Solid/Normal` | `lineSolidNormal` |
-| `Line/Solid/Neutral` | `lineSolidNeutral` |
-| `Line/Solid/Alternative` | `lineSolidAlternative` |
-| `Line/Solid/Strong` | `lineSolidStrong` |
-
-**Background**
-
-| Figma 토큰 | aos-common |
-|---|---|
-| `Background/Normal/Assistive` | `backgroundNormalAssistive` |
-| `Background/Normal/Alternative` | `backgroundNormalAlternative` |
-| `Background/Elevated/Alternative` | `backgroundElevatedAlternative` |
-
-**⚠️ 흰색 배경 varID 규칙**
-- Figma fill의 `boundVariables.color.id`가 `VariableID:080448dc88a7728d07bade89d13e5cd5ba59ffb5/...` 형태이면 → `Color.White` (순수 흰색)
-- 이 varID는 토큰 테이블에 없지만, rgb(255,255,255) = 흰색이므로 `Color.White`로 매핑한다
-- **루트 프레임 배경색 반드시 적용**: 화면 구현 시 루트 프레임(최상위 FRAME 노드)의 fill을 확인하여 Root Column에 해당 배경색을 적용한다
-- **`weight(1f)` + 배경색 조합 금지**: 섹션 배경은 해당 섹션의 자연 크기에만 적용하고, `weight(1f)` Column에 배경을 채우지 않는다 (빈 공간까지 색이 번짐)
-
-**⚠️ 배경색 토큰 검증 필수 규칙**
-피그마 API 분석 에이전트가 VariableID → 토큰명을 잘못 매핑하는 경우가 있다. 배경색 토큰 적용 전 반드시 아래를 확인한다:
-
-1. **export된 피그마 이미지를 눈으로 확인한다.** 배경이 흰색으로 보이면 `Color.White`를 사용한다. `backgroundNormalAssistive` 같은 토큰을 맹목적으로 따르지 않는다.
-2. **VariableID가 동일한데 토큰명이 다르게 표기된 경우** → 에이전트 오류로 간주하고 이미지 기준으로 판단한다.
-3. 배경색이 명백히 흰색인 화면에 `backgroundNormalAssistive`, `backgroundNormalAlternative` 등을 사용하지 않는다.
-
-배경색 적용 우선순위:
-- 디자인 이미지 확인 → 흰색이면 `Color.White`
-- 밝은 회색/오프화이트면 → `backgroundNormalAlternative`
-- 토큰명이 이미지와 일치할 때만 해당 토큰 사용
-
-**Status**
-
-| Figma 토큰 | aos-common |
-|---|---|
-| `Status/Positive` | `statusPositive` |
-| `Status/Cautionary` | `statusCautionary` |
-| `Status/Negative` | `statusNegative` |
-| `Status/Information` | `statusInformation` |
-
-**Fill / Material**
-
-| Figma 토큰 | aos-common |
-|---|---|
-| `Fill/Normal` | `fillNormal` |
-| `Fill/Strong` | `fillStrong` |
-| `Fill/Alternative` | `fillAlternative` |
-| `Material/Dimmer` | `materialDimmer` |
-
-**Interaction**
-
-| Figma 토큰 | aos-common |
-|---|---|
-| `Interaction/Inactive` | `interactionInactive` |
-| `Interaction/Disable` | `interactionDisable` |
-
-## 디자인 토큰 (Area.kt)
-
-피그마에서 토큰명이 보이면 아래 aos-common 토큰을 사용한다. AppResponsive 토큰은 폰/태블릿 반응형이므로 dp 하드코딩 금지.
-
-**디자인 토큰 사용 강제 규칙 — 모든 padding/spacing/radius/color 값에 대해, 숫자를 코드에 쓰기 전에 반드시 피그마 노드의 토큰명을 먼저 확인한다.**
-
-판단 기준:
-1. 피그마 노드에 토큰명이 있음 → 아래 테이블에서 대응하는 aos-common 토큰 사용
-2. 피그마 노드에 토큰 없이 숫자만 있음 → `.dp` 하드코딩
-
-**🚫 절대 금지: 수치로 토큰 추측**
-- 피그마 에이전트가 수치(예: 20dp)만 반환했을 때, 그 수치와 같은 다른 토큰(`appResTop` = 20dp)을 임의로 선택하면 안 된다
-- 수치가 같아도 토큰이 다르면 반응형 동작이 달라진다 (`appResTop`은 태블릿에서 32dp, `spaceDefault`는 고정 20dp)
-- 에이전트가 토큰명을 반환하지 않았으면 피그마 노드를 **직접 재조회**해서 토큰명을 확인한다
-- "아마 이 토큰일 것이다" 식의 추측은 절대 금지. 반드시 피그마 노드에서 확인 후 적용한다
-
-숫자가 같아도 피그마 토큰명이 다르면 다른 aos-common 토큰이다. 예시:
-- 8dp인데 피그마 토큰이 `Space/Button Vertical` → `spaceButtonVertical`
-- 8dp인데 피그마 토큰 없음 → `8.dp`
-- 16dp인데 피그마 토큰이 `AppResponsive/Margin` → `appResMargin`
-- 16dp인데 피그마 토큰이 `Space/Control` → `spaceControl`
-- 32dp인데 피그마 토큰이 `AppResponsive/Top Title` → `appResTopTitle`
-
-**AppResponsive (반응형, 폰→태블릿)**
-
-| Figma 토큰 | aos-common | 값 |
-|---|---|---|
-| `AppResponsive/Margin` | `appResMargin` | 16dp → 24dp |
-| `AppResponsive/Bottom` | `appResBottom` | 32dp → 48dp |
-| `AppResponsive/Top` | `appResTop` | 20dp → 32dp |
-| `AppResponsive/Top Title` | `appResTopTitle` | 32dp → 48dp |
-| `AppResponsive/Top Add Navigation` | `appResTopAddNavigation` | 88dp → 104dp |
-| `AppResponsive/Gutter Horizontal` | `appResGutterHorizontal` | 8dp → 16dp |
-| `AppResponsive/Gutter Vertical` | `appResGutterVertical` | 20dp → 28dp |
-
-**Space (고정)**
-
-| Figma 토큰 | aos-common | 값 |
-|---|---|---|
-| `Space/Default` | `spaceDefault` | 20dp |
-| `Size/Divider` | `sizeDivider` | 24dp |
-| `Space/Control` | `spaceControl` | 16dp |
-| `Space/Button Icon` | `spaceButtonIcon` | 16dp |
-| `Space/Button Vertical` | `spaceButtonVertical` | 8dp |
-
-**Radius**
-
-| Figma 토큰 | aos-common | 값 |
-|---|---|---|
-| `Radius/Thumbnail` | `radiusTunmbnail` | 12dp |
-| `Radius/Dialog` | `radiusDialog` | 12dp |
-| `Radius/Bottom Sheet` | `radiusBottomSheet` | 12dp |
-| `Radius/Dropdown` | `radiusDropDown` | 12dp |
-| `Radius/Toast` | `radiusToast` | 8dp |

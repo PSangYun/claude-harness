@@ -1,5 +1,5 @@
 # ktlint 코드 스타일 설정 — 저장소 루트에 .editorconfig 이름으로 복사
-# (도입 절차는 같은 폴더의 lint-setup.md 참조. aos-common·ParkGolfAOS는 2026-07-03 도입 완료)
+# (도입 절차는 같은 폴더의 lint-setup.md 참조)
 root = true
 
 [*.{kt,kts}]
@@ -14,7 +14,7 @@ ktlint_function_naming_ignore_when_annotated_with = Composable
 # 도입 초기 소음 방지 — 정착 후 조이기
 max_line_length = off
 
-# 팀 컨벤션과 충돌하는 규칙 비활성 (2026-07-03 도입 시 결정)
+# 팀 컨벤션과 충돌하는 규칙 비활성
 ktlint_standard_property-naming = disabled          # 네이밍 변경은 공개 API 파괴 위험 (라이브러리 호환성 규칙 우선)
 ktlint_standard_backing-property-naming = disabled  # 동일
 ktlint_standard_filename = disabled                 # 파일명 변경 리스크

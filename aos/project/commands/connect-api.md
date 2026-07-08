@@ -29,7 +29,7 @@ description: 3단계 — TODO 스텁에 실제 API 연결 (Retrofit 인터페이
 
 - 컴파일 성공: `./gradlew -q :<모듈>:compileDebugKotlin` + ktlint(있으면) 위반 0
 - dev 서버 접근이 가능하면 curl로 엔드포인트 1회 실측 (응답 형태 ↔ `@Serializable` 모델 대조)
-- 401/Could not resolve 류 실패는 GPR 자격증명 문제(환경) — 코드 수정으로 대응하지 말고 보고
+- 401/Could not resolve 류 실패는 대체로 코드가 아니라 패키지 저장소 인증/네트워크 등 환경 문제 — 코드 수정으로 대응하지 말고 보고
 
 ## Definition of Done
 

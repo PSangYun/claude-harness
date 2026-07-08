@@ -1,5 +1,5 @@
 ---
-description: 1단계 — Figma 디자인을 Compose UI로 구현 (aos-common 매핑, Screen→Content→Preview 구조, 동작 로직 없음). DoD 게이트 포함.
+description: 1단계 — Figma 디자인을 Compose UI로 구현 (프로젝트 공용 컴포넌트/토큰 재사용, Screen→Content→Preview 구조, 동작 로직 없음). DoD 게이트 포함.
 ---
 
 # /design — UI 구현 (1단계: UI만)
@@ -14,9 +14,9 @@ description: 1단계 — Figma 디자인을 Compose UI로 구현 (aos-common 매
 
 ## Phase B: 컴포넌트 매핑
 
-1. 피그마 컴포넌트 ↔ `aos-common` 기존 구현 매핑 — **`AOS_COMMON_GUIDE.md`를 먼저 확인**하고(소스 탐색은 보조), `component/{atoms,molecules,organisms}` 대응 확인
-2. **aos-common에 있는 컴포넌트는 절대 재구현하지 않는다.** 없는 것만 프로젝트 `core/component`(또는 프로젝트 컨벤션 위치)에 신규 작성
-3. 색상·치수·폰트는 aos-common `ui/theme`(Color/Area/Font) 토큰 사용 — hex/dp 하드코딩 금지
+1. 피그마 컴포넌트 ↔ 프로젝트 기존 구현 매핑 — 공용 디자인 시스템/컴포넌트 라이브러리가 있으면 그 가이드·컴포넌트 디렉터리를 먼저 확인하고, 프로젝트 내 유사 컴포넌트를 grep으로 확인
+2. **이미 있는 컴포넌트는 재구현하지 않는다.** 없는 것만 프로젝트 컨벤션 위치(예: `core/component`)에 신규 작성
+3. 색상·치수·폰트는 프로젝트 테마 토큰 사용 — hex/dp 하드코딩 금지
 
 ## Phase C: UI 구현
 
@@ -36,8 +36,8 @@ description: 1단계 — Figma 디자인을 Compose UI로 구현 (aos-common 매
 ## Definition of Done
 
 1. Phase A의 요소 표에 있는 모든 화면 요소가 구현됨 (표 ↔ 코드 대조 근거)
-2. aos-common에 존재하는 컴포넌트를 재구현하지 않음 (가이드/`component/` 확인 근거 제시)
-3. 색상·치수·폰트 하드코딩 없음 — `ui/theme` 토큰 사용 (신규 코드에 hex/`.dp` 리터럴은 토큰 부재 사유 명시분만)
+2. 프로젝트/공용 라이브러리에 이미 있는 컴포넌트를 재구현하지 않음 (확인 근거 제시)
+3. 색상·치수·폰트 하드코딩 없음 — 프로젝트 테마 토큰 사용 (신규 코드에 hex/`.dp` 리터럴은 토큰 부재 사유 명시분만)
 4. Screen → Content(stateless) → Preview 3단 구조 준수 (Content가 상태를 소유하지 않음)
 5. 컴파일 성공 (`compileDebugKotlin` 실행 결과)
 6. 동작 로직·API 호출 코드 없음 (콜백은 빈 람다 + TODO), 신규 코드에 `Log.d`/`println` 0건
