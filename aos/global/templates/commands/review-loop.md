@@ -21,7 +21,8 @@ Workflow({
 ## 실행 후 보고
 
 워크플로우 결과(JSON)를 받아 사용자에게 정리한다:
-1. `status` (CLEAN / PASS / FAIL)
+1. `status` (CLEAN / PASS / FAIL / BLOCKED)
 2. 지적·수정된 항목 요약 (파일별)
-3. `remaining`이 있으면 "사람 판단 필요" 목록으로 명시
+3. `remaining`·`minor`·`preexisting`(변경 전부터 있던 문제 — 무인 수정 안 함)이 있으면 "사람 판단 필요" 목록으로 명시
 4. FAIL이면 3회 상한에 도달한 것 — 절대 임의로 루프를 더 돌리지 말고 사용자 판단을 기다린다
+5. BLOCKED는 리뷰가 시작되지 못한 것(변경 범위 산출 실패 등) — FAIL과 달리 재시도 가능. 사유를 보고하고 재시도 여부를 사용자에게 묻는다

@@ -17,6 +17,7 @@ description: 유지보수 루프 — 프로젝트의 결정적 검증(컴파일/
 5. **TODO/FIXME 트리아지**: `grep -rn "TODO\|FIXME" --include="*.kt" <모듈>/src/main/` — 목록화만 (수정은 사람 판단)
 6. **프로젝트 루브릭**: 프로젝트 CLAUDE.md에 `## 프로젝트 루브릭` 섹션이 있으면 그 항목들도 검사에 포함
 7. **가이드 사본 동기화** (aos-common 소비 앱만): 앱의 `AOS_COMMON_GUIDE.md` 버전 표기 ↔ `build.gradle.kts`의 aos-common 의존 버전 일치 여부 — 불일치면 보고
+8. **하네스 자산 사본 동기화**: `.claude/{agents,hooks}` ↔ 글로벌 `~/.claude/{agents,hooks}` 원본, `.claude/{commands,workflows}` ↔ 글로벌 `~/.claude/templates/{commands,workflows}` 템플릿 대조 — 반드시 줄바꿈 정규화 비교(`diff --strip-trailing-cr`)를 사용 (CRLF 차이는 드리프트가 아님). 불일치면 보고만 (동기화 방향은 사람 판단)
 
 ## 절차 (반드시 이 순서)
 

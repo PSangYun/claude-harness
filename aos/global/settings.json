@@ -1,12 +1,11 @@
 {
   "hooks": {
-    "Stop": [
+    "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$HOME/.claude/hooks/stop-gate.js\"",
-            "timeout": 300
+            "command": "node \"$HOME/.claude/hooks/inject-model-rules.js\""
           }
         ]
       }

@@ -63,6 +63,7 @@ const FIX_RESULT = {
   properties: {
     summary: { type: "string" },
     disputed: { type: "array", items: { type: "string" } },
+    openQuestions: { type: "array", items: { type: "string" } },
   },
   required: ["summary"],
 };
@@ -98,20 +99,21 @@ const runStage = async (stageName, gateName, makerPrompt, dodSource, priorContex
 
   phase(gateName);
 
-  // 런타임 스모크 — checker가 못 하는 빌드/실행 검증을 smoke 에이전트가 대신 수행해 결과를 checker에 넘긴다
-  const smoke = await agent(
-    `스모크 검증을 수행해라: ./gradlew -q assembleDebug 빌드(.claude/stop-gate.json에 build 명령 있으면 그것 우선, Windows면 gradlew.bat), ` +
-      `adb devices에 연결된 기기/에뮬레이터가 이미 있으면 설치+실행까지 (임의 부팅 금지). 401/Could not resolve는 환경 문제로 ran:false 처리. ran·pass·build·launch·errors·note로 반환해라.`,
-    { label: `smoke:${stageName.toLowerCase()}`, phase: gateName, schema: SMOKE_RESULT, agentType: "smoke" }
-  );
-  if (smoke) log(`${gateName} smoke: ${smoke.ran ? (smoke.pass ? "PASS" : "FAIL") : "미실행"}`);
-  const smokeNote = smoke
-    ? `\n\n[런타임 스모크 결과] 너는 에뮬레이터를 직접 못 띄우니, DoD의 런타임/실행 항목은 아래 스모크 결과를 근거로 판정해라(ran:false면 '확인 불가→FAIL'): ${JSON.stringify(smoke)}`
-    : `\n\n[스모크 미수행] 런타임 검증을 못 했다. DoD의 런타임 전용 항목은 '확인 불가→FAIL'로 처리해라.`;
-
   let verdict = null;
   let lastFix = null;
   for (let round = 1; round <= MAX_FIX_ROUNDS + 1; round++) {
+    // 런타임 스모크 — checker가 못 하는 빌드/실행 검증을 smoke 에이전트가 대신 수행해 결과를 checker에 넘긴다.
+    // 매 라운드 재실행해 fix 반영 후의 최신 결과로 판정한다 (stale 증거로 반복 FAIL/거짓 PASS 방지)
+    const smoke = await agent(
+      `스모크 검증을 수행해라: ./gradlew -q assembleDebug 빌드(.claude/stop-gate.json에 build 명령 있으면 그것 우선, Windows PowerShell/cmd면 \`.\\gradlew.bat\`), ` +
+        `adb devices에 연결된 기기/에뮬레이터가 이미 있으면 설치+실행까지 (임의 부팅 금지). 401/Could not resolve는 환경 문제로 ran:false 처리. ran·pass·build·launch·errors·note로 반환해라.`,
+      { label: `smoke:${stageName.toLowerCase()}:r${round}`, phase: gateName, schema: SMOKE_RESULT, agentType: "smoke" }
+    );
+    if (smoke) log(`${gateName} smoke r${round}: ${smoke.ran ? (smoke.pass ? "PASS" : "FAIL") : "미실행"}`);
+    const smokeNote = smoke
+      ? `\n\n[런타임 스모크 결과 — 이번 라운드 실측] 너는 에뮬레이터를 직접 못 띄우니, DoD의 런타임/실행 항목은 아래 스모크 결과를 근거로 판정해라(ran:false면 '확인 불가→FAIL'): ${JSON.stringify(smoke)}`
+      : `\n\n[스모크 미수행] 런타임 검증을 못 했다. DoD의 런타임 전용 항목은 '확인 불가→FAIL'로 처리해라.`;
+
     const fixNote = lastFix
       ? `\n\n[직전 라운드 수정 요약] ${lastFix.summary}` +
         (lastFix.disputed && lastFix.disputed.length
@@ -121,7 +123,7 @@ const runStage = async (stageName, gateName, makerPrompt, dodSource, priorContex
     verdict = await agent(
       `${dodSource}의 "Definition of Done" 섹션을 Read로 읽고 그 항목들을 판정해라. ` +
         `변경 파일 목록은 maker 신고를 믿지 말고 \`git status --porcelain\`(추적+미추적, build 디렉토리 제외)로 직접 산출해서 그 파일들을 읽고 판정해라. ` +
-        `검증 명령(./gradlew -q :<모듈>:compileDebugKotlin, ktlintCheck 등 — 모듈명은 settings.gradle.kts 참조)은 직접 실행해서 확인해라. 401/Could not resolve는 환경 문제로 구분해라.${smokeNote}${fixNote}\n\npass와 failures를 반환해라.`,
+        `검증 명령(./gradlew -q :<모듈>:compileDebugKotlin, ktlintCheck 등 — 모듈명은 settings.gradle.kts 참조, Windows PowerShell/cmd면 \`.\\gradlew.bat\`)은 직접 실행해서 확인해라. 401/Could not resolve는 환경 문제로 구분해라.${smokeNote}${fixNote}\n\npass와 failures를 반환해라.`,
       { label: `gate:${stageName.toLowerCase()}:r${round}`, phase: gateName, schema: VERDICT, agentType: "checker" }
     );
     if (verdict && verdict.pass) break;
@@ -134,9 +136,18 @@ const runStage = async (stageName, gateName, makerPrompt, dodSource, priorContex
     log(`${gateName} FAIL (라운드 ${round}) — 수정 시도`);
     lastFix = await agent(
       `checker가 FAIL 판정한 항목을 수정해라 (maker 역할). ${UNATTENDED_NOTE}\n\n[FAIL 항목 전문]\n${JSON.stringify(failuresText, null, 2)}\n\n` +
-        `수정 후 ./gradlew -q :<모듈>:compileDebugKotlin(과 ktlintCheck, 도입돼 있으면)으로 자가 확인까지 하고, 한 항목이라도 '지적이 잘못됐다'고 판단하면 그 사유를 disputed에 담아라. 무엇을 어떻게 고쳤는지 summary에 적어라.`,
+        `수정 후 ./gradlew -q :<모듈>:compileDebugKotlin(과 ktlintCheck, 도입돼 있으면; Windows PowerShell/cmd면 \`.\\gradlew.bat\`)으로 자가 확인까지 하고, 한 항목이라도 '지적이 잘못됐다'고 판단하면 그 사유를 disputed에 담아라. 무엇을 어떻게 고쳤는지 summary에 적어라.`,
       { label: `fix:${stageName.toLowerCase()}:r${round}`, phase: gateName, schema: FIX_RESULT }
     );
+    // fix 라운드에서 발생한 질문도 유실 없이 사용자에게 도달해야 한다 (추측 금지 안전장치)
+    if (lastFix && Array.isArray(lastFix.openQuestions) && lastFix.openQuestions.length > 0) {
+      return {
+        ok: false,
+        reason: `${gateName} 수정 라운드에서 사용자 답변 필요`,
+        openQuestions: lastFix.openQuestions,
+        summary: lastFix.summary || result.summary,
+      };
+    }
   }
   if (!verdict || !verdict.pass) {
     return {

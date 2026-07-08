@@ -12,7 +12,7 @@ tools:
 
 ## 절차 (이것만)
 
-1. **빌드**: `./gradlew -q assembleDebug` (Windows면 `gradlew.bat`; `.claude/stop-gate.json`에 build 명령이 있으면 그것을 우선 사용)
+1. **빌드**: `./gradlew -q assembleDebug` (Windows PowerShell/cmd면 `.\gradlew.bat`, Git Bash면 `./gradlew` 그대로; `.claude/stop-gate.json`에 build 명령이 있으면 그것을 우선 사용)
    - 실패 출력이 `401 Unauthorized`/`Could not resolve com.itappandsy...`면 GPR 자격증명 문제 — `ran: false`, note에 "환경 문제(GPR)"로 보고하고 종료
    - 코드 문제로 실패면 `pass: false`, 에러 요약을 반환하고 종료
 2. **실행 확인 (연결된 기기/에뮬레이터가 이미 있을 때만)**:

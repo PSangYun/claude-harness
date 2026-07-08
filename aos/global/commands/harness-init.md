@@ -36,8 +36,11 @@ description: 프로젝트를 루프 하네스에 편입 — CLAUDE.md 생성/검
 
 누락 자산을 확인하고 동기화를 제안:
 - `.claude/agents/`: checker·smoke·code-reviewer·test-writer (글로벌 `~/.claude/agents/` 사본 — 커맨드/워크플로우가 이들을 호출하므로 프로젝트에 함께 있어야 환경 독립적으로 동작)
-- `.claude/hooks/stop-gate.js` (Stop, 글로벌과 동일 사본) + `.claude/settings.json`에 훅 등록
-- `.claude/workflows/review-and-fix.js`
+- `.claude/hooks/stop-gate.js` (Stop, 글로벌과 동일 사본) + `.claude/settings.json`에 훅 등록 — **글로벌 settings.json에는 Stop 훅을 등록하지 않는다** (프로젝트와 이중 등록되어 게이트가 턴마다 2회 돌게 됨)
+- `.claude/commands/`: maintain·review-loop (+ 프로젝트 유형별 구현 커맨드) — 씨딩 소스는 `~/.claude/templates/commands/`. 글로벌 `~/.claude/commands/`에 같은 이름을 두면 스킬 목록에 이중 노출되므로 **활성 커맨드는 프로젝트에만** 둔다
+- `.claude/workflows/`: review-and-fix.js·implement-feature.js — 씨딩 소스는 `~/.claude/templates/workflows/`
+- `.gitattributes`에 `.claude/**/*.md`·`*.js`·`*.json` `text eol=lf` 추가 (Windows 체크아웃 시 글로벌 원본과의 CRLF diff 노이즈 방지)
+- **역반영 규칙**: 프로젝트 사본이 글로벌 원본/템플릿과 다르면(반드시 줄바꿈 정규화 비교 — `diff --strip-trailing-cr`) diff를 보고하고, 사용자 확인 후 개선분을 **템플릿에 먼저 반영한 뒤** 각 프로젝트로 재씨딩한다 — 단방향 씨딩만 있으면 드리프트가 구조적으로 재발한다
 - 자동 감지가 안 맞는 프로젝트면 `.claude/stop-gate.json`에 build/lint/test 명령 명시
 - **ktlint 또는 detekt 미도입이면 도입을 제안** — 현재 AOS 저장소들은 린트가 없어 결정적 게이트가 컴파일뿐이므로, 린트 도입이 하네스 검증력을 크게 올린다 (도입하면 stop-gate가 자동으로 감지해 실행)
 

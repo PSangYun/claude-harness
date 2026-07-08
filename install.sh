@@ -18,15 +18,18 @@ command -v node >/dev/null || { echo "❌ Node.js가 필요합니다 (훅이 nod
 
 mkdir -p "$DST/hooks" "$DST/commands" "$DST/agents"
 
-# 1. 훅·커맨드·에이전트 복사 (기존 동명 파일은 백업 후 교체)
-for d in hooks commands agents; do
+# 1. 훅·커맨드·에이전트 + (플랫폼에 있으면) prompts·templates 복사 (기존 동명 파일은 백업 후 교체)
+for d in hooks commands agents prompts templates/commands templates/workflows; do
+  [ -d "$SRC/$d" ] || continue
+  mkdir -p "$DST/$d"
   for f in "$SRC/$d"/*; do
+    [ -f "$f" ] || continue
     base="$(basename "$f")"
     [ -f "$DST/$d/$base" ] && ! cmp -s "$f" "$DST/$d/$base" && cp "$DST/$d/$base" "$DST/$d/$base.bak-$STAMP"
     cp "$f" "$DST/$d/$base"
   done
 done
-echo "✅ hooks / commands / agents 설치"
+echo "✅ hooks / commands / agents (+ 플랫폼에 있으면 prompts·templates) 설치"
 
 # 2. CLAUDE.md — 없으면 복사, 있는데 하네스 규약이 없으면 백업 후 이어붙임
 if [ ! -f "$DST/CLAUDE.md" ]; then
@@ -40,24 +43,42 @@ else
   echo "☑️  CLAUDE.md에 하네스 규약이 이미 있음 — 건너뜀"
 fi
 
-# 3. settings.json — Stop(stop-gate) 훅 병합 (기존 설정 보존)
+# 3. settings.json — 훅 병합 (기존 설정 보존, 이벤트별 스크립트 파일명 기준 중복 방지)
+#    aos는 Stop 훅을 글로벌에 두지 않는다 — 프로젝트 .claude/settings.json에만 등록해
+#    글로벌+프로젝트 이중 실행을 막는 정책. 글로벌에는 SessionStart(inject-model-rules)만 병합
+if [ -f "$SRC/settings.json" ]; then
 node - "$SRC/settings.json" "$DST/settings.json" <<'EOF'
 const fs = require("fs");
+const os = require("os");
 const [srcPath, dstPath] = process.argv.slice(2);
 const src = JSON.parse(fs.readFileSync(srcPath, "utf8"));
 let dst = {};
 try { dst = JSON.parse(fs.readFileSync(dstPath, "utf8")); } catch {}
 dst.hooks = dst.hooks || {};
-dst.hooks.Stop = dst.hooks.Stop || [];
-const has = JSON.stringify(dst.hooks.Stop).includes("stop-gate.js");
-if (!has) {
-  dst.hooks.Stop.push(...src.hooks.Stop);
+// $HOME 플레이스홀더는 설치 시점의 실제 홈 경로로 치환 — 훅 실행 셸의 변수 확장에 의존하지 않는다 (Windows 대비)
+const home = os.homedir().replace(/\\/g, "/");
+const added = [];
+for (const [event, entries] of Object.entries(src.hooks || {})) {
+  dst.hooks[event] = dst.hooks[event] || [];
+  const have = JSON.stringify(dst.hooks[event]);
+  for (const entry of entries) {
+    const resolved = JSON.parse(JSON.stringify(entry).replace(/\$HOME/g, () => home));
+    const marker = (JSON.stringify(resolved).match(/[\w.-]+\.js/) || [""])[0];
+    if (marker && have.includes(marker)) continue;
+    dst.hooks[event].push(resolved);
+    added.push(event + "(" + (marker || "?") + ")");
+  }
+}
+if (added.length) {
   fs.writeFileSync(dstPath, JSON.stringify(dst, null, 2) + "\n");
-  console.log("✅ settings.json에 Stop(stop-gate) 훅 등록");
+  console.log("✅ settings.json 훅 등록: " + added.join(", "));
 } else {
-  console.log("☑️  settings.json에 stop-gate 훅이 이미 등록됨 — 건너뜀");
+  console.log("☑️  settings.json에 훅이 이미 등록됨 — 건너뜀");
 }
 EOF
+else
+  echo "☑️  글로벌 settings.json 없는 플랫폼 ($P) — 훅 병합 건너뜀"
+fi
 
 # 4. 동작 확인
 if echo '{}' | node "$DST/hooks/stop-gate.js" >/dev/null 2>&1; then
