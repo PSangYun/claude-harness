@@ -92,10 +92,10 @@ phase("Review");
 const scopePrompt =
   `변경 범위만 산출해라(리뷰하지 마라). \`git diff --name-only ${base}\`와 \`git ls-files --others --exclude-standard\`의 합집합에서 ` +
   `Pods·DerivedData·.build·.git 등 빌드/의존성 산출물을 제외한 실제 소스 파일 목록을 files로 반환해라.`;
-let scope = await agent(scopePrompt, { label: "scope", phase: "Review", schema: SCOPE, model: "sonnet" });
+let scope = await agent(scopePrompt, { label: "scope", phase: "Review", schema: SCOPE, model: "haiku" });
 if (!scope || !Array.isArray(scope.files)) {
   log("scope 산출 실패 — 1회 재시도");
-  scope = await agent(scopePrompt, { label: "scope:retry", phase: "Review", schema: SCOPE, model: "sonnet" });
+  scope = await agent(scopePrompt, { label: "scope:retry", phase: "Review", schema: SCOPE, model: "haiku" });
 }
 const files = scope && Array.isArray(scope.files) ? scope.files : null;
 if (files === null) {
@@ -123,9 +123,9 @@ const reviewDefs = [
       `각 지적은 file/line/severity(critical|major|minor)/description으로 반환. 문제 없으면 빈 배열.\n\n리뷰 대상 파일: ${fileList}`,
   },
   {
-    // 규칙 패턴 매칭 → 추론 거의 불필요하므로 sonnet (토큰 절약)
+    // 규칙 패턴 매칭 → 추론 거의 불필요하므로 haiku (토큰 절약)
     label: "review:convention",
-    model: "sonnet",
+    model: "haiku",
     prompt:
       `아래 "리뷰 대상 파일"에서 컨벤션 위반만 스캔해라. 각 파일을 Read로 읽어라. ` +
       `프로젝트 CLAUDE.md의 "핵심 규칙"·"반복되는 실수" 섹션(그리고 있으면 .claude/hooks/quality-check.js의 검사 항목)을 기준으로: ` +

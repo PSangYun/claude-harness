@@ -98,16 +98,21 @@ const runStage = async (stageName, gateName, makerPrompt, dodSource, priorContex
 
   phase(gateName);
 
-  // 런타임 스모크 — checker가 못 하는 빌드/실행 검증을 smoke 에이전트가 대신 수행해 결과를 checker에 넘긴다
-  const smoke = await agent(
-    `스모크 검증을 수행해라: 시뮬레이터 대상 xcodebuild 빌드(.claude/stop-gate.json 또는 프로젝트 CLAUDE.md의 명령), ` +
-      `부팅된 시뮬레이터가 이미 있으면 설치+실행까지 (임의 부팅 금지). ran·pass·build·launch·errors·note로 반환해라.`,
-    { label: `smoke:${stageName.toLowerCase()}`, phase: gateName, schema: SMOKE_RESULT, agentType: "smoke" }
-  );
+  const shouldRunSmoke = args.runSmoke === true || stageName === "Design" || stageName === "ConnectApi";
+  // 런타임 스모크는 UI/연동 단계에만 수행한다. Logic 단계는 build/checker 검증으로 충분해 반복 요청 수를 줄인다.
+  const smoke = shouldRunSmoke
+    ? await agent(
+        `스모크 검증을 수행해라: 시뮬레이터 대상 xcodebuild 빌드(.claude/stop-gate.json 또는 프로젝트 CLAUDE.md의 명령), ` +
+          `부팅된 시뮬레이터가 이미 있으면 설치+실행까지 (임의 부팅 금지). ran·pass·build·launch·errors·note로 반환해라.`,
+        { label: `smoke:${stageName.toLowerCase()}`, phase: gateName, schema: SMOKE_RESULT, agentType: "smoke" }
+      )
+    : null;
   if (smoke) log(`${gateName} smoke: ${smoke.ran ? (smoke.pass ? "PASS" : "FAIL") : "미실행"}`);
   const smokeNote = smoke
     ? `\n\n[런타임 스모크 결과] 너는 시뮬레이터를 직접 못 띄우니, DoD의 런타임/실행 항목은 아래 스모크 결과를 근거로 판정해라(ran:false면 '확인 불가→FAIL'): ${JSON.stringify(smoke)}`
-    : `\n\n[스모크 미수행] 런타임 검증을 못 했다. DoD의 런타임 전용 항목은 '확인 불가→FAIL'로 처리해라.`;
+    : shouldRunSmoke
+      ? `\n\n[스모크 미수행] 런타임 검증을 못 했다. DoD의 런타임 전용 항목은 '확인 불가→FAIL'로 처리해라.`
+      : "";
 
   let verdict = null;
   let lastFix = null;

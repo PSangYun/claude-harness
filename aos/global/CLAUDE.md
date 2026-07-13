@@ -1,6 +1,6 @@
 # 글로벌 규칙
 
-<!-- 코딩 스타일·응답 방식·파일 작업·보안·커밋 금지 규칙(4·7·8·9·12절)은 SessionStart 훅(hooks/inject-model-rules.js)이 모델에 맞는 판을 주입한다: sonnet 계열 → prompts/SONNET_STYLE_SYSTEM_PROMPT.md, 그 외 → prompts/OPUS_4_8_STYLE_SYSTEM_PROMPT.md. 여기에 중복 추가하지 말 것 -->
+<!-- 코딩 스타일·응답 방식·파일 작업·보안·커밋 금지 규칙(4·7·8·9·12절)은 SessionStart 훅(hooks/inject-model-rules.js)이 모델에 맞는 축약판을 주입한다: sonnet 계열 → prompts/SONNET_STYLE_COMPACT_PROMPT.md, 그 외 → prompts/OPUS_4_8_STYLE_COMPACT_PROMPT.md. 전체판이 필요할 때만 CLAUDE_HARNESS_STYLE_PROMPT=full로 올린다. 여기에 중복 추가하지 말 것 -->
 
 ## 언어
 
