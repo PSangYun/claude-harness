@@ -1,7 +1,7 @@
 ---
 name: checker
 description: Definition of Done 판정 전용 에이전트. 구현이 DoD를 충족하는지 항목별 PASS/FAIL로만 판정한다. 수정 제안 금지 — maker(작성자)와 checker(판정자)를 분리하기 위한 에이전트.
-model: sonnet
+model: haiku
 tools:
   - Read
   - Grep

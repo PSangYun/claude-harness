@@ -9,9 +9,9 @@ aos/
 ├── global/            # 팀원 각자의 ~/.claude/ 에 배치 — ./install.sh aos
 │   ├── CLAUDE.md      #   글로벌 규칙 + Android 전용 규칙(@Keep·Compose Stability 등)
 │   │                  #   + 범용 Figma 파싱/구현 워크플로우
-│   ├── settings.json  #   SessionStart(inject-model-rules) 훅만 등록 — Stop 훅 없음 (아래 정책)
+│   ├── settings.json  #   SessionStart(inject-model-rules) 훅만 등록 — compact prompt 기본, Stop 훅 없음
 │   ├── prompts/       #   모델별 운영 규칙 프롬프트 8종 (OPUS·SONNET 각 4종)
-│   ├── hooks/         #   stop-gate.js + inject-model-rules.js (SessionStart 시 모델에 맞는 prompts 판 주입)
+│   ├── hooks/         #   stop-gate.js + inject-model-rules.js (SessionStart 시 모델에 맞는 compact prompts 판 주입)
 │   ├── commands/      #   harness-init만 활성 (maintain·review-loop는 templates/로 이동)
 │   ├── templates/     #   프로젝트 씨딩 원본 — commands/{maintain,review-loop}
 │   │                  #   + workflows/{implement-feature,review-and-fix}
@@ -23,6 +23,13 @@ aos/
     ├── workflows/     #   implement-feature · review-and-fix
     └── templates/     #   린트 도입 (.editorconfig + lint-setup.md)
 ```
+
+
+## 토큰 절약 기본값
+
+- `global/settings.json`은 `CLAUDE_CODE_DISABLE_1M_CONTEXT=1`을 기본 env로 둬 1M 컨텍스트 세션이 장시간 비대해지는 것을 피한다. 기존 개인 전역 설정을 직접 정리할 때는 `global/settings.token-saving.example.json`을 참고한다.
+- `inject-model-rules.js`는 기본적으로 `*_COMPACT_PROMPT.md`만 주입한다. 전체 `*_SYSTEM_PROMPT.md`가 필요한 장기/고난도 작업에서만 `CLAUDE_HARNESS_STYLE_PROMPT=full`로 올린다.
+- 추가 규칙 주입이 불필요한 세션은 `CLAUDE_HARNESS_INJECT_MODEL_RULES=0`으로 SessionStart 추가 컨텍스트를 끌 수 있다.
 
 ## 글로벌 Stop 훅 미등록 정책 (web/ios와 다름)
 

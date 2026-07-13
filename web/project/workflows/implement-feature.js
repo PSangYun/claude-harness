@@ -101,7 +101,8 @@ const runStage = async (stageName, gateName, makerPrompt, dodSource, priorContex
 
   // 런타임 스모크 — checker가 못 하는 렌더/콘솔/4xx 검증을 smoke 에이전트가 대신 수행해 결과를 checker에 넘긴다
   let smoke = null;
-  if (args.page) {
+  const shouldRunSmoke = args.runSmoke === true || stageName === "Design" || stageName === "ConnectApi";
+  if (args.page && shouldRunSmoke) {
     smoke = await agent(
       `.claude/commands/verify-smoke.md 절차로 ${args.page} 페이지를 스모크 검증해라. ` +
         `dev 서버가 안 떠 있으면 임의로 띄우지 말고 ran:false로 반환해라. 렌더/콘솔에러/네트워크실패를 ran·pass·render·consoleErrors·networkFailures로 반환.`,
@@ -111,7 +112,9 @@ const runStage = async (stageName, gateName, makerPrompt, dodSource, priorContex
   }
   const smokeNote = smoke
     ? `\n\n[런타임 스모크 결과] 너는 브라우저를 직접 못 띄우니, DoD의 런타임/Playwright 항목은 아래 스모크 결과를 근거로 판정해라(ran:false면 '확인 불가→FAIL'): ${JSON.stringify(smoke)}`
-    : `\n\n[스모크 미수행] page 인자가 없어 런타임 검증을 못 했다. DoD의 런타임 전용 항목은 '확인 불가→FAIL'로 처리해라.`;
+    : shouldRunSmoke
+      ? `\n\n[스모크 미수행] page 인자가 없어 런타임 검증을 못 했다. DoD의 런타임 전용 항목은 '확인 불가→FAIL'로 처리해라.`
+      : "";
 
   let verdict = null;
   let lastFix = null;
