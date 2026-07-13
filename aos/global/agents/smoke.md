@@ -1,7 +1,7 @@
 ---
 name: smoke
 description: 경량 런타임 스모크 검증 전용 에이전트. 디버그 빌드(및 가능하면 기기 실행)만 빠르게 확인하고 구조화 결과를 반환한다. 수정 금지 — 판정만 한다. checker가 못 하는 런타임 검증을 대신한다.
-model: sonnet
+model: haiku
 tools:
   - Bash
   - Read

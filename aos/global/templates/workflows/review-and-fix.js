@@ -94,10 +94,10 @@ phase("Review");
 const scopePrompt =
   `변경 범위만 산출해라(리뷰하지 마라). \`git diff --name-only --diff-filter=d ${base}\`와 \`git ls-files --others --exclude-standard\`의 합집합에서 ` +
   `build·.gradle·.git 등 빌드/의존성 산출물을 제외한 실제 소스 파일 목록을 files로 반환해라. 삭제된 파일 등 현재 워킹트리에 존재하지 않는 경로는 제외한다.`;
-let scope = await agent(scopePrompt, { label: "scope", phase: "Review", schema: SCOPE, model: "sonnet" });
+let scope = await agent(scopePrompt, { label: "scope", phase: "Review", schema: SCOPE, model: "haiku" });
 if (!scope || !Array.isArray(scope.files)) {
   log("scope 산출 실패 — 1회 재시도");
-  scope = await agent(scopePrompt, { label: "scope:retry", phase: "Review", schema: SCOPE, model: "sonnet" });
+  scope = await agent(scopePrompt, { label: "scope:retry", phase: "Review", schema: SCOPE, model: "haiku" });
 }
 const files = scope && Array.isArray(scope.files) ? scope.files : null;
 if (files === null) {
@@ -126,9 +126,9 @@ const reviewDefs = [
       `각 지적은 file/line/severity(critical|major|minor)/description으로 반환. 문제 없으면 빈 배열.\n\n리뷰 대상 파일: ${fileList}`,
   },
   {
-    // 규칙 패턴 매칭 → 추론 거의 불필요하므로 sonnet (토큰 절약)
+    // 규칙 패턴 매칭 → 추론 거의 불필요하므로 haiku (토큰 절약)
     label: "review:convention",
-    model: "sonnet",
+    model: "haiku",
     prompt:
       `아래 "리뷰 대상 파일"에서 컨벤션 위반만 스캔해라. 각 파일을 Read로 읽되, \`git diff ${base} -- <파일>\`의 변경 hunk를 함께 확인해 이번 변경분의 위반 위주로 지적해라. ` +
       `변경과 무관하게 원래 있던 기존 코드 위반은 preexisting:true로 표시해라(자동 수정 대상에서 제외되고 보고만 된다). ` +

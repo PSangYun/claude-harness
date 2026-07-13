@@ -99,20 +99,24 @@ const runStage = async (stageName, gateName, makerPrompt, dodSource, priorContex
 
   phase(gateName);
 
+  const shouldRunSmoke = args.runSmoke === true || stageName === "Design" || stageName === "ConnectApi";
   let verdict = null;
   let lastFix = null;
   for (let round = 1; round <= MAX_FIX_ROUNDS + 1; round++) {
-    // 런타임 스모크 — checker가 못 하는 빌드/실행 검증을 smoke 에이전트가 대신 수행해 결과를 checker에 넘긴다.
-    // 매 라운드 재실행해 fix 반영 후의 최신 결과로 판정한다 (stale 증거로 반복 FAIL/거짓 PASS 방지)
-    const smoke = await agent(
-      `스모크 검증을 수행해라: ./gradlew -q assembleDebug 빌드(.claude/stop-gate.json에 build 명령 있으면 그것 우선, Windows PowerShell/cmd면 \`.\\gradlew.bat\`), ` +
-        `adb devices에 연결된 기기/에뮬레이터가 이미 있으면 설치+실행까지 (임의 부팅 금지). 401/Could not resolve는 환경 문제로 ran:false 처리. ran·pass·build·launch·errors·note로 반환해라.`,
-      { label: `smoke:${stageName.toLowerCase()}:r${round}`, phase: gateName, schema: SMOKE_RESULT, agentType: "smoke" }
-    );
+    // 런타임 스모크는 UI/연동 단계에만 수행한다. Logic 단계는 compile/checker 검증으로 충분해 반복 요청 수를 줄인다.
+    const smoke = shouldRunSmoke
+      ? await agent(
+          `스모크 검증을 수행해라: ./gradlew -q assembleDebug 빌드(.claude/stop-gate.json에 build 명령 있으면 그것 우선, Windows PowerShell/cmd면 \`.\\gradlew.bat\`), ` +
+            `adb devices에 연결된 기기/에뮬레이터가 이미 있으면 설치+실행까지 (임의 부팅 금지). 401/Could not resolve는 환경 문제로 ran:false 처리. ran·pass·build·launch·errors·note로 반환해라.`,
+          { label: `smoke:${stageName.toLowerCase()}:r${round}`, phase: gateName, schema: SMOKE_RESULT, agentType: "smoke" }
+        )
+      : null;
     if (smoke) log(`${gateName} smoke r${round}: ${smoke.ran ? (smoke.pass ? "PASS" : "FAIL") : "미실행"}`);
     const smokeNote = smoke
       ? `\n\n[런타임 스모크 결과 — 이번 라운드 실측] 너는 에뮬레이터를 직접 못 띄우니, DoD의 런타임/실행 항목은 아래 스모크 결과를 근거로 판정해라(ran:false면 '확인 불가→FAIL'): ${JSON.stringify(smoke)}`
-      : `\n\n[스모크 미수행] 런타임 검증을 못 했다. DoD의 런타임 전용 항목은 '확인 불가→FAIL'로 처리해라.`;
+      : shouldRunSmoke
+        ? `\n\n[스모크 미수행] 런타임 검증을 못 했다. DoD의 런타임 전용 항목은 '확인 불가→FAIL'로 처리해라.`
+        : "";
 
     const fixNote = lastFix
       ? `\n\n[직전 라운드 수정 요약] ${lastFix.summary}` +
