@@ -18,6 +18,7 @@ export const meta = {
 //   designUrls?: string[]     — Figma 디자인 URL들 (있으면 Design 단계 실행)
 //   logicUrl?: string         — Figma 디스크립션 URL 또는 기능정의서 링크/내용
 //   apiSpec?: string          — API 명세 (엔드포인트/메서드/타입)
+//   runSmoke?: boolean        — true면 Logic 단계에도 런타임 스모크 수행 (기본: Design·ConnectApi 게이트만)
 // }
 if (!args || !args.domain) throw new Error("args.domain은 필수다 (기능 도메인명)");
 
@@ -80,7 +81,7 @@ const runStage = async (stageName, gateName, makerPrompt, dodSource, priorContex
     makerPrompt +
     (priorContext
       ? `\n\n[직전 단계 산출물 — 인터페이스 일관성을 맞춰라]\n${priorContext}\n` +
-        `위 Content 파라미터/uiState·함수 시그니처와 충돌하지 않게 구현해라. 충돌이 불가피하면 임의로 바꾸지 말고 openQuestions로 보고해라.`
+        `위 Contract(UiState/Intent/Navigation)·Screen 파라미터·함수 시그니처와 충돌하지 않게 구현해라. 충돌이 불가피하면 임의로 바꾸지 말고 openQuestions로 보고해라.`
       : "");
   const result = await agent(fullMakerPrompt, {
     label: `maker:${stageName.toLowerCase()}`,
@@ -101,18 +102,27 @@ const runStage = async (stageName, gateName, makerPrompt, dodSource, priorContex
 
   let verdict = null;
   let lastFix = null;
+  // 런타임 스모크는 UI/연동 단계(Design·ConnectApi)에만 수행한다. Logic 단계는 compile/checker 검증으로 충분하므로
+  // 라운드마다 smoke 에이전트를 호출하는 요청 수를 줄인다. args.runSmoke === true 면 모든 단계에서 수행한다.
+  const shouldRunSmoke = args.runSmoke === true || stageName === "Design" || stageName === "ConnectApi";
   for (let round = 1; round <= MAX_FIX_ROUNDS + 1; round++) {
-    // 런타임 스모크 — checker가 못 하는 빌드/실행 검증을 smoke 에이전트가 대신 수행해 결과를 checker에 넘긴다.
+    // 런타임 스모크 — checker가 못 하는 실행 검증을 smoke 에이전트가 대신 수행해 결과를 checker에 넘긴다.
+    // smoke는 adb devices로 기기를 먼저 확인하고, 없으면 assembleDebug도 생략한 채 ran:false 로 즉시 돌아온다
+    // (컴파일은 checker가 검증 — 기기 없는 환경에서 라운드마다 APK 전체 빌드를 하지 않는다).
     // 매 라운드 재실행해 fix 반영 후의 최신 결과로 판정한다 (stale 증거로 반복 FAIL/거짓 PASS 방지)
-    const smoke = await agent(
-      `스모크 검증을 수행해라: ./gradlew -q assembleDebug 빌드(.claude/stop-gate.json에 build 명령 있으면 그것 우선, Windows PowerShell/cmd면 \`.\\gradlew.bat\`), ` +
-        `adb devices에 연결된 기기/에뮬레이터가 이미 있으면 설치+실행까지 (임의 부팅 금지). 401/Could not resolve는 환경 문제로 ran:false 처리. ran·pass·build·launch·errors·note로 반환해라.`,
+    const smoke = !shouldRunSmoke ? null : await agent(
+      `스모크 검증을 수행해라. 먼저 adb devices로 연결된 기기/에뮬레이터를 확인하고, 없으면 빌드도 하지 말고 ` +
+        `ran:false·pass:false·build:false·launch:"skipped"·note:"연결된 기기 없음"으로 즉시 반환해라 (컴파일은 checker가 검증한다, 임의 부팅 금지). ` +
+        `기기가 있으면 ./gradlew -q assembleDebug 빌드(.claude/stop-gate.json에 build 명령 있으면 그것 우선, Windows PowerShell/cmd면 \`.\\gradlew.bat\`) 후 설치+실행까지 확인해라. ` +
+        `401/Could not resolve는 환경 문제로 ran:false 처리. ran·pass·build·launch·errors·note로 반환해라.`,
       { label: `smoke:${stageName.toLowerCase()}:r${round}`, phase: gateName, schema: SMOKE_RESULT, agentType: "smoke" }
     );
-    if (smoke) log(`${gateName} smoke r${round}: ${smoke.ran ? (smoke.pass ? "PASS" : "FAIL") : "미실행"}`);
+    if (smoke) log(`${gateName} smoke r${round}: ${smoke.ran ? (smoke.pass ? "PASS" : "FAIL") : `미실행(${smoke.note || "사유 없음"})`}`);
     const smokeNote = smoke
       ? `\n\n[런타임 스모크 결과 — 이번 라운드 실측] 너는 에뮬레이터를 직접 못 띄우니, DoD의 런타임/실행 항목은 아래 스모크 결과를 근거로 판정해라(ran:false면 '확인 불가→FAIL'): ${JSON.stringify(smoke)}`
-      : `\n\n[스모크 미수행] 런타임 검증을 못 했다. DoD의 런타임 전용 항목은 '확인 불가→FAIL'로 처리해라.`;
+      : shouldRunSmoke
+        ? `\n\n[스모크 미수행] 런타임 검증을 못 했다. DoD의 런타임 전용 항목은 '확인 불가→FAIL'로 처리해라.`
+        : `\n\n[스모크 생략 단계] 이 단계는 런타임 스모크를 돌리지 않는다. 컴파일·테스트 명령 결과로 판정하고, DoD에 실행/렌더 전용 항목이 있으면 '확인 불가→FAIL'로 처리해라.`;
 
     const fixNote = lastFix
       ? `\n\n[직전 라운드 수정 요약] ${lastFix.summary}` +
@@ -123,7 +133,9 @@ const runStage = async (stageName, gateName, makerPrompt, dodSource, priorContex
     verdict = await agent(
       `${dodSource}의 "Definition of Done" 섹션을 Read로 읽고 그 항목들을 판정해라. ` +
         `변경 파일 목록은 maker 신고를 믿지 말고 \`git status --porcelain\`(추적+미추적, build 디렉토리 제외)로 직접 산출해서 그 파일들을 읽고 판정해라. ` +
-        `검증 명령(./gradlew -q :<모듈>:compileDebugKotlin, ktlintCheck 등 — 모듈명은 settings.gradle.kts 참조, Windows PowerShell/cmd면 \`.\\gradlew.bat\`)은 직접 실행해서 확인해라. 401/Could not resolve는 환경 문제로 구분해라.${smokeNote}${fixNote}\n\npass와 failures를 반환해라.`,
+        `검증 명령(./gradlew -q :<모듈>:compileDebugKotlin, ktlintCheck 등 — 모듈명은 settings.gradle.kts 참조, Windows PowerShell/cmd면 \`.\\gradlew.bat\`)은 직접 실행해서 확인해라. ` +
+        `단, 아래 스모크 결과에 build:true가 있으면 컴파일 항목은 그 결과(assembleDebug 성공 = compileDebugKotlin 포함)를 근거로 판정하고 compileDebugKotlin을 다시 실행하지 마라 (같은 변경에 빌드 2회 금지). ` +
+        `401/Could not resolve는 환경 문제로 구분해라.${smokeNote}${fixNote}\n\npass와 failures를 반환해라.`,
       { label: `gate:${stageName.toLowerCase()}:r${round}`, phase: gateName, schema: VERDICT, agentType: "checker" }
     );
     if (verdict && verdict.pass) break;

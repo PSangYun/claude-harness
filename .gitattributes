@@ -1,0 +1,10 @@
+# 하네스 자산은 LF 고정 — install.sh(bash)·훅 JS·프로젝트 사본과의 diff 비교에서 CRLF 노이즈 방지 (Windows 체크아웃 포함)
+* text=auto
+*.sh text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.txt text eol=lf
+.editorconfig text eol=lf
+.worktreeinclude text eol=lf

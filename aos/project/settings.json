@@ -1,11 +1,30 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew:*)",
+      "Bash(.\\gradlew.bat:*)",
+      "mcp__figma-remote-mcp__get_screenshot",
+      "mcp__figma-remote-mcp__get_design_context",
+      "mcp__figma-remote-mcp__get_metadata",
+      "mcp__ide__getDiagnostics"
+    ],
+    "deny": [
+      "Read(./local.properties)",
+      "Read(**/local.properties)",
+      "Read(//**/.ssh/**)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(//**/.claude/.credentials.json)"
+    ]
+  },
   "hooks": {
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/stop-gate.js",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-gate.js\"",
             "timeout": 300
           }
         ]

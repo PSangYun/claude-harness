@@ -9,10 +9,10 @@
 harness/
 ├── web/  ios/  aos/
 │   ├── global/           # 팀원 각자의 ~/.claude/ 에 배치 (개인 머신)
-│   │   ├── CLAUDE.md     #   글로벌 규칙 + 공통 라이브러리 매핑
-│   │   ├── settings.json #   Stop 훅(stop-gate) 등록
-│   │   ├── hooks/stop-gate.js
-│   │   ├── commands/     #   harness-init · maintain · review-loop
+│   │   ├── CLAUDE.md     #   글로벌 규칙 + 공통 라이브러리 매핑 (aos는 핵심판 ~70줄 — 세부 규칙은 rules/·references/로 분리)
+│   │   ├── settings.json #   Stop 훅(stop-gate) 등록 (aos는 SessionStart 훅만 — aos/README 참조)
+│   │   ├── hooks/stop-gate.js   (aos는 글로벌 사본 없음 — project/hooks/stop-gate.js 가 정본)
+│   │   ├── commands/     #   harness-init · maintain · review-loop (aos는 harness-init만 — 나머지는 project/commands)
 │   │   └── agents/       #   checker · code-reviewer · smoke · test-writer
 │   ├── project/          # 각 저장소의 .claude/ 에 배치 (git 추적 → 팀 배포 채널)
 │   │   ├── settings.json
@@ -20,7 +20,8 @@ harness/
 │   │   ├── workflows/              review-and-fix.js + implement-feature.js (3플랫폼 전부)
 │   │   ├── commands/               design·logic·connect-api (DoD 포함 — **앱 저장소 전용**.
 │   │   │                            web은 bokjiportal의 DoD 포함판이 정본이라 여기 미포함)
-│   │   └── templates/              린트 도입 템플릿 (ios: .swiftlint.yml / aos: .editorconfig + lint-setup.md)
+│   │   └── templates/              린트 도입 템플릿 (ios: .swiftlint.yml / aos: .editorconfig + lint-setup.md
+│   │                                + stop-gate.json · .worktreeinclude · ci.yml · gitattributes/gitignore 블록)
 │   └── library/          # 공통 라이브러리 저장소 전용 커맨드 (앱 커맨드 대신 배치)
 │       └── commands/               component.md(DS 컴포넌트 구현) + publish.md(배포 절차) — DoD 포함
 └── README.md (이 문서)
@@ -41,7 +42,7 @@ harness/
 ## 공통 요구사항
 
 - **Node.js** — 모든 훅이 node 기반 (크로스플랫폼: ParkGolfAOS의 Windows 개발 환경 포함). `node -v`로 확인.
-- 훅 등록 후 동작 확인: `echo '{}' | node ~/.claude/hooks/stop-gate.js` → 아무 출력 없이 종료하면 정상.
+- 훅 등록 후 동작 확인: `echo '{}' | node ~/.claude/hooks/stop-gate.js` → 아무 출력 없이 종료하면 정상 (aos는 글로벌 사본이 없으므로 프로젝트에서 `node .claude/hooks/stop-gate.js`).
 
 ## 설치 절차
 
@@ -53,7 +54,7 @@ cd claude-harness
 ./install.sh <web|ios|aos>     # Windows는 Git Bash에서 실행
 ```
 
-스크립트가 하는 일: hooks/commands/agents 복사(기존 파일은 백업), CLAUDE.md 병합(하네스 규약 없을 때만 추가), settings.json에 Stop 훅 병합(기존 설정 보존), stop-gate 동작 확인까지. 수동으로 하려면 `<플랫폼>/global/`을 `~/.claude/`에 같은 규칙으로 복사하면 된다.
+스크립트가 하는 일: hooks/commands/agents 복사(기존 파일은 백업, 플랫폼에 있으면 prompts·rules·references·templates도), CLAUDE.md 병합(하네스 규약 없을 때만 추가), settings.json에 훅 병합(web/ios는 Stop, aos는 SessionStart + env·subagentPromptCacheTtl — 기존 설정 보존), 훅 동작 확인까지. aos는 `aos/project/{commands,workflows,templates}`도 `~/.claude/templates/`로 복사해 `/harness-init`의 씨딩 원본으로 쓴다. 수동으로 하려면 `<플랫폼>/global/`을 `~/.claude/`에 같은 규칙으로 복사하면 된다.
 
 ### 저장소당 1회 — 프로젝트 자산 (`.claude/`, git 커밋)
 
@@ -78,7 +79,7 @@ git add .claude .gitignore   # settings.local.json이 스테이징 안 됐는지
 | 명령 오버라이드 | — | `.claude/stop-gate.json` `{lint,build,test}` | `.claude/stop-gate.json` `{lint,build,test}` |
 | 환경 실패 처리 | fail-open | Xcode 없음 → 통과 / 콜드 빌드 초과 → 가시화 스킵 | GPR 401/미해석 → 가시화 스킵 (코드 문제와 구분) |
 
-공통 안전장치: 코드 변경 없으면 비용 0 통과, `stop_hook_active` 무한 루프 가드, 240s 예산 초과 시 fail-open(가시화), PASS 스탬프 2분 캐시(글로벌+프로젝트 중복 등록 대비), `.claude/hooks/*.js` 변경 시 `node --check` 자기방어.
+공통 안전장치: 코드 변경 없으면 비용 0 통과, `stop_hook_active` 무한 루프 가드, 240s 예산 초과 시 fail-open(가시화), PASS 스탬프 캐시(같은 변경 상태면 재검증 생략 — web/ios는 2분으로 글로벌+프로젝트 중복 등록 대비, aos는 변경 파일 서명+HEAD 기준 12시간), `.claude/hooks/*.js` 변경 시 `node --check` 자기방어. aos는 compile·lint·짝 테스트를 Gradle 1회 호출(`--continue`)로 묶어 설정 단계를 한 번만 치른다.
 
 ## 조사에서 발견된 조치 필요 사항 (하네스와 별개로 사람 판단 필요)
 
@@ -100,8 +101,8 @@ git add .claude .gitignore   # settings.local.json이 스테이징 안 됐는지
 
 세 플랫폼 모두 DoD 게이트가 달린 무인 파이프라인을 지원한다:
 
-- **커맨드**: `/design`(UI만, 공통 라이브러리 매핑) → `/logic`(동작, API는 TODO 스텁) → `/connect-api`(API 연결). 각 커맨드에 `## Definition of Done` 섹션이 있어 checker가 판정 근거로 사용. iOS/AOS 버전은 `project/commands/`에 포함 (Screen→Content→Preview, VM 상태 전이 등 플랫폼 컨벤션 반영). **web은 bokjiportal의 DoD 포함 커맨드가 정본** — 웹 저장소에는 bokjiportal 것을 복사할 것.
-- **워크플로우**: `implement-feature.js` — 자료(designUrls/logicUrl/apiSpec)가 준비된 단계까지 maker→smoke→checker 게이트(FAIL 시 수정 루프 최대 3회)로 자동 진행. 모바일 스모크는 빌드+(기기 연결 시) 실행 확인.
+- **커맨드**: `/design`(UI만, 공통 라이브러리 매핑) → `/logic`(동작, API는 TODO 스텁) → `/connect-api`(API 연결). 각 커맨드에 `## Definition of Done` 섹션이 있어 checker가 판정 근거로 사용. iOS/AOS 버전은 `project/commands/`에 포함 (iOS: Screen→Content→Preview, AOS: UDF Contract/Route/Screen/ViewModel — 플랫폼 컨벤션 반영). **web은 bokjiportal의 DoD 포함 커맨드가 정본** — 웹 저장소에는 bokjiportal 것을 복사할 것.
+- **워크플로우**: `implement-feature.js` — 자료(designUrls/logicUrl/apiSpec)가 준비된 단계까지 maker→smoke→checker 게이트(FAIL 시 수정 루프 최대 3회)로 자동 진행. 모바일 스모크는 빌드+(기기 연결 시) 실행 확인 (aos는 Design·ConnectApi 게이트에서만 수행하고, `adb devices`에 기기가 없으면 빌드도 생략해 `ran:false` — 컴파일은 checker가 1회만 검증. `runSmoke: true`면 전 단계).
 
 ## 린트 도입 (project/templates/ — 도입 즉시 stop-gate가 자동 감지)
 

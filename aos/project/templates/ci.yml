@@ -1,0 +1,83 @@
+# ── 하네스 CI 템플릿 (ParkGolf 기준) — /harness-init Phase 3가 .github/workflows/ 가 없는 프로젝트에 씨딩을 제안한다 ──
+# 적용 전 확인: ① 모듈명 :app → settings.gradle.kts 실측값으로 교체  ② aos-common 미사용 프로젝트는 "aos-common 버전 드리프트 검사" 스텝 삭제
+# ③ 저장소 Secrets에 GPR_USER / GPR_KEY 등록 (aos-common은 GitHub Packages에서 받음)  ④ ktlint 미도입이면 :app:ktlintCheck 제거
+
+name: CI
+
+# PR 머지 게이트 — ktlint · 컴파일 · wrapper 검증 · 프로젝트 커스텀 검사(버전 드리프트/산출물 오염)
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# 같은 PR/브랜치에서 새 커밋이 올라오면 진행 중인 실행을 취소
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 체크아웃
+        uses: actions/checkout@v6
+        with:
+          # 산출물 오염 검사가 base와 diff를 뜨기 위해 전체 히스토리 필요
+          fetch-depth: 0
+
+      - name: Gradle wrapper 검증
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: aos-common 버전 드리프트 검사
+        run: |
+          set -euo pipefail
+          APP_VER=$(grep -oE 'com\.itappandsy:aos-common:[0-9]+\.[0-9]+\.[0-9]+' app/build.gradle.kts \
+            | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+          GUIDE_VER=$(grep -oE '\([0-9]+\.[0-9]+\.[0-9]+\)' AOS_COMMON_GUIDE.md | head -1 | tr -d '()' || true)
+          echo "build.gradle.kts: $APP_VER / AOS_COMMON_GUIDE.md: $GUIDE_VER"
+          if [ -z "$APP_VER" ] || [ -z "$GUIDE_VER" ]; then
+            echo "::error::버전 표기를 찾지 못했습니다 (APP_VER='$APP_VER', GUIDE_VER='$GUIDE_VER')"
+            exit 1
+          fi
+          if [ "$APP_VER" != "$GUIDE_VER" ]; then
+            echo "::error::aos-common 버전 불일치 — build.gradle.kts($APP_VER) ↔ AOS_COMMON_GUIDE.md($GUIDE_VER). 가이드 사본을 함께 갱신해 주세요."
+            exit 1
+          fi
+
+      - name: 산출물 오염 검사 (신규 추가 파일)
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          ADDED=$(git diff --name-only --diff-filter=A "$BASE"...HEAD || true)
+          # 피그마 덤프/원본 자산 패턴: 어디든 .svg, 루트 레벨 이미지/json,
+          # .claude 하위 이미지/svg, api-/nodes-/figma-/dump- json
+          OFFENDERS=$(echo "$ADDED" | grep -iE \
+            '\.svg$|^[^/]+\.(json|png|jpe?g)$|^\.claude/.*\.(png|jpe?g|svg)$|(^|/)(api|nodes|figma|dump)[-_].*\.json$' \
+            || true)
+          if [ -n "$OFFENDERS" ]; then
+            echo "::error::저장소에 산출물(피그마 덤프/원본 SVG·이미지)이 새로 추가되었습니다. 세션 스크래치패드에만 두고 커밋에서 제외해 주세요:"
+            echo "$OFFENDERS"
+            exit 1
+          fi
+
+      - name: JDK 17 설정
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle 설정 (캐시)
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Gradle 실행 권한 부여
+        run: chmod +x gradlew
+
+      - name: ktlint + 컴파일 검증
+        env:
+          GPR_USER: ${{ secrets.GPR_USER }}
+          GPR_KEY: ${{ secrets.GPR_KEY }}
+        run: ./gradlew :app:ktlintCheck :app:compileDebugKotlin

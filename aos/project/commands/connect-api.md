@@ -21,7 +21,7 @@ description: 3단계 — TODO 스텁에 실제 API 연결 (Retrofit 인터페이
 
 ## Phase C: VM 연결 + 상태 처리
 
-- 2단계 스텁을 실제 repository 호출로 교체 — `viewModelScope` 코루틴, 로딩 상태 + 에러 상태를 uiState에 반영
+- 2단계 스텁을 실제 repository 호출로 교체 — `viewModelScope` 코루틴, 로딩 상태 + 에러 상태를 uiState에 반영 (성공 후 화면 이동 같은 중요한 결과는 `UiState.result` + `ResultHandled` Intent — Channel/SharedFlow로만 전달 금지)
 - 사용자 노출 에러는 기존 패턴(toast/스낵바/에러 뷰)으로 표시
 - 중복 요청 방지·화면 이탈 시 취소(viewModelScope가 담당하는지 확인)
 
@@ -40,6 +40,6 @@ description: 3단계 — TODO 스텁에 실제 API 연결 (Retrofit 인터페이
 5. 컴파일 성공 (`compileDebugKotlin` 실행 결과)
 6. URL·키·토큰 하드코딩 0건 (BuildConfig/local.properties 주입)
 
-> **완료 선언 전 checker 서브에이전트의 PASS 판정 필수** (maker/checker 분리 — 글로벌 규약). 런타임 확인은 smoke 에이전트(빌드+실행) 결과를 checker에 전달한다.
+> **완료 선언 전 checker 서브에이전트의 PASS 판정 필수** (maker/checker 분리 — 글로벌 규약). 런타임 확인은 smoke 에이전트(기기 연결 시 빌드+실행, 없으면 `ran:false`) 결과를 checker에 전달한다.
 
 $ARGUMENTS

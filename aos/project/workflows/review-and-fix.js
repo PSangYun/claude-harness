@@ -94,10 +94,11 @@ phase("Review");
 const scopePrompt =
   `변경 범위만 산출해라(리뷰하지 마라). \`git diff --name-only --diff-filter=d ${base}\`와 \`git ls-files --others --exclude-standard\`의 합집합에서 ` +
   `build·.gradle·.git 등 빌드/의존성 산출물을 제외한 실제 소스 파일 목록을 files로 반환해라. 삭제된 파일 등 현재 워킹트리에 존재하지 않는 경로는 제외한다.`;
-let scope = await agent(scopePrompt, { label: "scope", phase: "Review", schema: SCOPE, model: "sonnet" });
+// 변경 파일 목록 산출은 git 명령 결과 정리뿐 → haiku (토큰 절약)
+let scope = await agent(scopePrompt, { label: "scope", phase: "Review", schema: SCOPE, model: "haiku" });
 if (!scope || !Array.isArray(scope.files)) {
   log("scope 산출 실패 — 1회 재시도");
-  scope = await agent(scopePrompt, { label: "scope:retry", phase: "Review", schema: SCOPE, model: "sonnet" });
+  scope = await agent(scopePrompt, { label: "scope:retry", phase: "Review", schema: SCOPE, model: "haiku" });
 }
 const files = scope && Array.isArray(scope.files) ? scope.files : null;
 if (files === null) {
@@ -126,14 +127,14 @@ const reviewDefs = [
       `각 지적은 file/line/severity(critical|major|minor)/description으로 반환. 문제 없으면 빈 배열.\n\n리뷰 대상 파일: ${fileList}`,
   },
   {
-    // 규칙 패턴 매칭 → 추론 거의 불필요하므로 sonnet (토큰 절약)
+    // 규칙 패턴 매칭 → 추론 거의 불필요하므로 haiku (토큰 절약)
     label: "review:convention",
-    model: "sonnet",
+    model: "haiku",
     prompt:
       `아래 "리뷰 대상 파일"에서 컨벤션 위반만 스캔해라. 각 파일을 Read로 읽되, \`git diff ${base} -- <파일>\`의 변경 hunk를 함께 확인해 이번 변경분의 위반 위주로 지적해라. ` +
       `변경과 무관하게 원래 있던 기존 코드 위반은 preexisting:true로 표시해라(자동 수정 대상에서 제외되고 보고만 된다). ` +
       `프로젝트 CLAUDE.md의 "핵심 규칙"·"반복되는 실수" 섹션(그리고 있으면 .claude/hooks/quality-check.js의 검사 항목)을 기준으로: ` +
-      `aos-common 컴포넌트 재구현, 색상/치수 하드코딩(ui/theme 토큰 미사용), Screen→Content→Preview 구조 위반, collectAsState 사용, Log.d·println 잔존, XML 레이아웃 추가 등. ` +
+      `aos-common 컴포넌트 재구현, 색상/치수 하드코딩(ui/theme 토큰 미사용), UDF 화면 구조 위반(Screen에 ViewModel 전달, Route에서 Repository 호출, Route에 NavController 전달, ViewModel에서 Navigation 실행, 중요 결과를 Channel/SharedFlow로만 전달 — 프로젝트 루트 UDF_ARCHITECTURE_GUIDE.md 7절 기준, 가이드 없는 프로젝트는 CLAUDE.md의 화면 구조 컨벤션 기준), collectAsState 사용, Log.d·println 잔존, XML 레이아웃 추가 등. ` +
       `각 위반은 file/line/severity/description으로 반환. 문제 없으면 빈 배열.\n\n리뷰 대상 파일: ${fileList}`,
   },
 ];

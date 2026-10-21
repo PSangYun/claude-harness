@@ -2,6 +2,7 @@
 name: test-writer
 description: 순수 로직(도메인 모델, 유틸, ViewModel 상태 전이)의 테스트를 작성하는 전문가
 model: sonnet
+maxTurns: 60
 tools:
   - Read
   - Write

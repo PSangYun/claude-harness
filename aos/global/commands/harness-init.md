@@ -11,16 +11,17 @@ description: 프로젝트를 루프 하네스에 편입 — CLAUDE.md 생성/검
 1. 빌드 시스템 파악: `settings.gradle.kts`의 모듈 목록, `gradle/libs.versions.toml`(AGP/Kotlin/Compose 버전), gradle wrapper 유무
 2. 검증 수단 파악: ktlint/detekt/spotless 선언 유무, 실질 테스트 유무(Example* 템플릿 제외), `.github/workflows/` 유무
 3. 빌드 전제조건 파악: `local.properties` 요구사항 (GPR 자격증명, 서명 키, 소셜 로그인 키) — **없으면 어떤 태스크까지 가능한지** 확인
-4. 실제 구조 파악: 주요 패키지 트리(2~3단계), 아키텍처(MVVM/Hilt/레이어링), git 브랜치(`git branch -a`)
+4. 실제 구조 파악: 주요 패키지 트리(2~3단계), 아키텍처(MVVM/Hilt/레이어링, 루트 `UDF_ARCHITECTURE_GUIDE.md` 유무와 화면 파일 구성이 Contract/Route/Screen/ViewModel인지), git 브랜치(`git branch -a`), `.worktreeinclude`·`.gitattributes`·`.github/workflows/` 유무
 5. 기존 `.claude/` 자산 확인: commands, agents, hooks, settings, workflows
 6. 공통 라이브러리 소비 확인: `aos-common` 의존 버전 ↔ 라이브러리 최신 버전 ↔ `AOS_COMMON_GUIDE.md` 사본 버전 3자 비교 — 드리프트 발견 시 보고
 
 ## Phase 2: CLAUDE.md 생성 또는 검증
 
+- **신규 시작 프로젝트(화면 코드가 아직 없음)면** `~/.claude/templates/UDF_ARCHITECTURE_GUIDE.md`를 프로젝트 루트 `UDF_ARCHITECTURE_GUIDE.md`로 씨딩하고(ParkGolf와 같은 위치), CLAUDE.md 아키텍처 섹션에 "화면 구현 시 `UDF_ARCHITECTURE_GUIDE.md` 준수 (Contract/Route/Screen/ViewModel)"를 적는다. **기존/clone 프로젝트에는 씨딩하지 않는다** — 기존 아키텍처를 따르고, 가이드와 다른 점은 보고만 한다
 - **CLAUDE.md가 없으면**: 아래 섹션 구조로 직접 작성. 플레이스홀더는 Phase 1에서 파악한 **실제 값**으로만 채운다 — 추측 금지
   - 프로젝트 개요 (모듈, SDK 버전, 주요 의존성)
   - 빌드·검증 명령 (정확한 Gradle 태스크 — 모듈명 실측값)
-  - 아키텍처 (패키지 구조, 레이어 규칙, Screen/Content/Preview 컨벤션)
+  - 아키텍처 (패키지 구조, 레이어 규칙, 화면 구조 컨벤션 — UDF 프로젝트면 Contract/Route/Screen/ViewModel, 아니면 실측한 구조 그대로)
   - 핵심 규칙 (aos-common 재사용, 테마 토큰, 공개 API 변경 절차)
   - `## 프로젝트 루브릭`
   - `## 반복되는 실수` (승격 규약 주석 포함)
@@ -39,10 +40,13 @@ description: 프로젝트를 루프 하네스에 편입 — CLAUDE.md 생성/검
 - `.claude/hooks/stop-gate.js` (Stop, 글로벌과 동일 사본) + `.claude/settings.json`에 훅 등록 — **글로벌 settings.json에는 Stop 훅을 등록하지 않는다** (프로젝트와 이중 등록되어 게이트가 턴마다 2회 돌게 됨)
 - `.claude/commands/`: maintain·review-loop (+ 프로젝트 유형별 구현 커맨드) — 씨딩 소스는 `~/.claude/templates/commands/`. 글로벌 `~/.claude/commands/`에 같은 이름을 두면 스킬 목록에 이중 노출되므로 **활성 커맨드는 프로젝트에만** 둔다
 - `.claude/workflows/`: review-and-fix.js·implement-feature.js — 씨딩 소스는 `~/.claude/templates/workflows/`
-- `.gitattributes`에 `.claude/**/*.md`·`*.js`·`*.json` `text eol=lf` 추가 (Windows 체크아웃 시 글로벌 원본과의 CRLF diff 노이즈 방지)
+- `.gitattributes`에 `~/.claude/templates/gitattributes-block.txt`의 줄(`.claude/**/*.md`·`*.js`·`*.json` `text eol=lf`)을 없는 것만 추가 (Windows 체크아웃 시 글로벌 원본과의 CRLF diff 노이즈 방지)
+- `.gitignore`에 `~/.claude/templates/gitignore-block.txt`의 줄을 없는 것만 추가 (`settings.local.json*`·`.claude/worktrees/`·`.kotlin/`·피그마 덤프·서명 키 — ParkGolf 기준)
+- `.worktreeinclude`가 없으면 `~/.claude/templates/.worktreeinclude`를 프로젝트 루트에 복사 (worktree 생성 시 `local.properties`를 함께 복사해 GPR 자격증명 누락으로 stop-gate가 skip되는 것을 방지)
+- `.github/workflows/`가 없으면 `~/.claude/templates/ci.yml` 씨딩을 **제안만** 한다 (CI는 배포 설정 변경이므로 사용자 확인 후 적용 — 모듈명·aos-common 드리프트 검사·Secrets 등록은 템플릿 상단 주석대로 조정)
 - **역반영 규칙**: 프로젝트 사본이 글로벌 원본/템플릿과 다르면(반드시 줄바꿈 정규화 비교 — `diff --strip-trailing-cr`) diff를 보고하고, 사용자 확인 후 개선분을 **템플릿에 먼저 반영한 뒤** 각 프로젝트로 재씨딩한다 — 단방향 씨딩만 있으면 드리프트가 구조적으로 재발한다
-- 자동 감지가 안 맞는 프로젝트면 `.claude/stop-gate.json`에 build/lint/test 명령 명시
-- **ktlint 또는 detekt 미도입이면 도입을 제안** — 현재 AOS 저장소들은 린트가 없어 결정적 게이트가 컴파일뿐이므로, 린트 도입이 하네스 검증력을 크게 올린다 (도입하면 stop-gate가 자동으로 감지해 실행)
+- 자동 감지가 안 맞는 프로젝트면 `.claude/stop-gate.json`에 build/lint/test 명령 명시 (키 설명·예시: `~/.claude/templates/stop-gate.json` — testScope/excludeTests 포함)
+- **ktlint 또는 detekt 미도입이면 도입을 제안** — 현재 AOS 저장소들은 린트가 없어 결정적 게이트가 컴파일뿐이므로, 린트 도입이 하네스 검증력을 크게 올린다 (도입하면 stop-gate가 자동으로 감지해 실행 — 절차는 `~/.claude/templates/lint-setup.md`, `.editorconfig`도 같은 위치)
 
 ## Phase 4: 권한 오염 검사
 
@@ -60,13 +64,14 @@ description: 프로젝트를 루프 하네스에 편입 — CLAUDE.md 생성/검
 하네스는 **git이 배포 채널**이다. `.claude/` 본체가 추적되지 않으면 팀원이 clone/pull해도 하네스가 따라오지 않는다:
 
 1. `git ls-files .claude | wc -l`로 현재 추적 여부 확인 (0이면 미추적 상태)
-2. `git status .claude/`로 무엇이 untracked인지 확인하고, **개인 설정·비밀이 없는지 점검**(`settings.local.json*`은 .gitignore로 제외 — 토큰/키가 들어 있지 않은지 한 번 더 확인)
-3. 공유 자산을 추적 시작: `git add .claude/agents .claude/hooks .claude/workflows .claude/settings.json` (+ 있으면 `.claude/stop-gate.json`, `.claude/commands`)
+2. `git status .claude/`로 무엇이 untracked인지 확인하고, **개인 설정·비밀이 없는지 점검**(`settings.local.json*`은 .gitignore로 제외 — 토큰/키가 들어 있지 않은지 한 번 더 확인. `.claude/worktrees/`·`scheduled_tasks.lock`도 제외 대상)
+3. 공유 자산을 추적 시작: `git add .claude/agents .claude/hooks .claude/workflows .claude/commands .claude/settings.json` (+ 있으면 `.claude/stop-gate.json`, `.gitattributes`, `.worktreeinclude`, `UDF_ARCHITECTURE_GUIDE.md`, `.github/workflows/ci.yml`) — `settings.local.json`이 스테이징에 섞이지 않았는지 `git status`로 재확인
 4. 커밋은 **사용자에게 확인 후** 진행 (임의 커밋 금지). 커밋 메시지 예: `chore: AI 하네스 자산 git 추적`
 
 ## Phase 7: 동작 확인 + 보고
 
 1. stop-gate 동작 확인: 변경 없는 상태에서 `echo '{}' | node .claude/hooks/stop-gate.js` 가 조용히 통과하는지
 2. 사용자에게 최종 보고: 생성/수정한 파일, 발견한 불일치와 처리 결과, 사용 가능한 루프 도구 안내 (`/maintain`, `/loop`, `/review-loop`, DoD 게이트)
+3. 적용 시점 안내: 이미 열려 있는 다른 Claude 세션에는 글로벌 CLAUDE.md·`~/.claude/rules/` 변경이 `/clear` 또는 재시작 전까지 적용되지 않는다. 프로젝트 `.claude/settings.json`의 훅 등록은 파일 저장 즉시 반영된다.
 
 $ARGUMENTS
