@@ -8,7 +8,7 @@ description: 유지보수 루프 — 프로젝트의 결정적 검증(컴파일/
 
 ## 루브릭 (전부 충족 시 CLEAN)
 
-프로젝트에 **존재하는 검증만** 실행한다 (모듈명은 settings.gradle.kts에서 확인 — 예: ParkGolfAOS는 `:app`, aos-common은 `:AosCommon`):
+프로젝트에 **존재하는 검증만** 실행한다 (모듈명은 settings.gradle.kts에서 확인 — 예: 앱은 `:app`, 라이브러리는 해당 모듈명):
 
 1. **컴파일**: `./gradlew :<모듈>:compileDebugKotlin` — 에러 0 (type-check 대용, 현재 유일한 결정적 게이트)
 2. **린트** (ktlint/detekt가 빌드 스크립트에 선언된 경우만): `./gradlew ktlintCheck` / `./gradlew detekt` — 에러 0. 미도입이면 "없음"으로 보고 (도입 제안 가능)
@@ -16,7 +16,7 @@ description: 유지보수 루프 — 프로젝트의 결정적 검증(컴파일/
 4. **테스트**: 실질 테스트 파일이 있으면 `./gradlew :<모듈>:testDebugUnitTest` — 통과 (Example* 템플릿만 있으면 "실질 테스트 없음"으로 보고)
 5. **TODO/FIXME 트리아지**: `grep -rn "TODO\|FIXME" --include="*.kt" <모듈>/src/main/` — 목록화만 (수정은 사람 판단)
 6. **프로젝트 루브릭**: 프로젝트 CLAUDE.md에 `## 프로젝트 루브릭` 섹션이 있으면 그 항목들도 검사에 포함
-7. **가이드 사본 동기화** (aos-common 소비 앱만): 앱의 `AOS_COMMON_GUIDE.md` 버전 표기 ↔ `build.gradle.kts`의 aos-common 의존 버전 일치 여부 — 불일치면 보고
+7. **가이드 사본 동기화** (공용 라이브러리 가이드 사본을 두는 앱만): 앱에 둔 가이드 사본의 버전 표기 ↔ `build.gradle.kts`의 해당 라이브러리 의존 버전 일치 여부 — 불일치면 보고
 8. **하네스 자산 사본 동기화**: `.claude/{agents,hooks}` ↔ 글로벌 `~/.claude/{agents,hooks}` 원본, `.claude/{commands,workflows}` ↔ 글로벌 `~/.claude/templates/{commands,workflows}` 템플릿 대조 — 반드시 줄바꿈 정규화 비교(`diff --strip-trailing-cr`)를 사용 (CRLF 차이는 드리프트가 아님). 불일치면 보고만 (동기화 방향은 사람 판단)
 
 ## 절차 (반드시 이 순서)
@@ -37,7 +37,7 @@ description: 유지보수 루프 — 프로젝트의 결정적 검증(컴파일/
 
 ## 주의
 
-- 빌드 실패가 `401 Unauthorized`/`Could not resolve com.itappandsy...`면 코드 문제가 아니라 **GPR 자격증명(local.properties의 gpr.user/gpr.key) 문제**다 — 수정 시도하지 말고 환경 문제로 보고
+- 빌드 실패가 `401 Unauthorized`/`Could not resolve <사설 아티팩트 좌표>`면 코드 문제가 아니라 **사설 저장소 자격증명(local.properties 등) 문제**다 — 수정 시도하지 말고 환경 문제로 보고
 
 ## 사용법
 

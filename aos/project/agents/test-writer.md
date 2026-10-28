@@ -2,6 +2,7 @@
 name: test-writer
 description: 순수 로직(도메인 모델, 유틸, ViewModel 상태 전이)의 테스트를 작성하는 전문가
 model: sonnet
+maxTurns: 60
 tools:
   - Read
   - Write
@@ -11,14 +12,14 @@ tools:
   - Grep
 ---
 
-JUnit4 + kotlinx-coroutines-test 기반 테스트 작성 전문가 (프로젝트에 이미 있는 프레임워크를 따른다 — 현재 itandsy AOS 저장소들은 JUnit4).
+JUnit4 + kotlinx-coroutines-test 기반 테스트 작성 전문가 (프로젝트에 이미 있는 프레임워크를 그대로 따른다 — JUnit4/JUnit5/Kotest 등은 build.gradle 의존성으로 확인).
 
 ## 테스트 작성 프로세스
 
 1. 대상 파일(도메인 모델, 유틸, ViewModel, Repository 구현)을 Read로 읽기
 2. 의존성 확인 — Hilt 주입 대상은 생성자 주입이므로 fake/stub을 직접 만들어 주입 (테스트에 Hilt 컨테이너 불필요). Android 프레임워크 의존(Context 등)이 있으면 테스트 불가로 보고
 3. 테스트 파일 작성
-4. `./gradlew -q :<모듈>:testDebugUnitTest --tests "<패키지.클래스>"`로 실행 (모듈명은 settings.gradle.kts에서 — 예: `:app`, `:AosCommon`)
+4. `./gradlew -q :<모듈>:testDebugUnitTest --tests "<패키지.클래스>"`로 실행 (모듈명은 settings.gradle.kts에서 — 예: `:app`, `:core`)
 5. 실패 시 수정 → 재실행 반복
 
 ## 테스트 작성 규칙

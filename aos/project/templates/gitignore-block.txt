@@ -1,0 +1,28 @@
+# ── Claude Code 하네스 권장 .gitignore 블록 — /harness-init Phase 3가 프로젝트 .gitignore에 없는 줄만 이어붙인다 ──
+
+# Kotlin 컴파일러 세션 산출물 (빌드마다 재생성 — 커밋 금지)
+.kotlin/
+
+# 릴리스 빌드 산출물·서명 키·시크릿 (커밋 절대 금지)
+/app/release/
+*.apk
+*.aab
+*.jks
+*.keystore
+keystore.properties
+local.properties
+
+# Figma 분석용 임시 산출물 (디자인 참조용 — 빌드 무관, 세션 스크래치패드에만 둔다)
+figma_*
+.figma_*
+FIGMA_*
+/.tmp_*
+/api-*.json
+
+# Claude Code worktree
+.claude/worktrees/
+
+# Claude Code 개인/런타임 파일 — 세션별 권한이 누적되고 토큰이 포함될 수 있어 커밋 금지
+.claude/settings.local.json
+.claude/settings.local.json.bak-*
+.claude/scheduled_tasks.lock

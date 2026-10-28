@@ -1,0 +1,5 @@
+# claude --worktree 가 만드는 worktree(.claude/worktrees/<name>/)에 자동 복사할 gitignore 대상 파일 (gitignore 문법).
+# 저장소 루트에 둔다 (/harness-init Phase 3가 씨딩).
+# local.properties(SDK 경로·사설 저장소 자격증명)가 없으면 worktree 빌드가 "SDK location not found"/401로 실패해
+# stop-gate가 매 턴 fail-open 스킵만 반복한다.
+local.properties
