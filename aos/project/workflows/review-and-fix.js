@@ -134,7 +134,7 @@ const reviewDefs = [
       `아래 "리뷰 대상 파일"에서 컨벤션 위반만 스캔해라. 각 파일을 Read로 읽되, \`git diff ${base} -- <파일>\`의 변경 hunk를 함께 확인해 이번 변경분의 위반 위주로 지적해라. ` +
       `변경과 무관하게 원래 있던 기존 코드 위반은 preexisting:true로 표시해라(자동 수정 대상에서 제외되고 보고만 된다). ` +
       `프로젝트 CLAUDE.md의 "핵심 규칙"·"반복되는 실수" 섹션(그리고 있으면 .claude/hooks/quality-check.js의 검사 항목)을 기준으로: ` +
-      `aos-common 컴포넌트 재구현, 색상/치수 하드코딩(ui/theme 토큰 미사용), UDF 화면 구조 위반(Screen에 ViewModel 전달, Route에서 Repository 호출, Route에 NavController 전달, ViewModel에서 Navigation 실행, 중요 결과를 Channel/SharedFlow로만 전달 — 프로젝트 루트 UDF_ARCHITECTURE_GUIDE.md 7절 기준, 가이드 없는 프로젝트는 CLAUDE.md의 화면 구조 컨벤션 기준), collectAsState 사용, Log.d·println 잔존, XML 레이아웃 추가 등. ` +
+      `aos-common 컴포넌트 재구현, 색상/치수 하드코딩(ui/theme 토큰 미사용), UDF 화면 구조 위반(Screen에 ViewModel 전달, Route에서 Repository 호출, Route에 NavController 전달, ViewModel에서 Navigation 실행, 중요 결과를 Channel/SharedFlow로만 전달 — 프로젝트 루트 UDF_ARCHITECTURE_GUIDE.md 7절 기준, 가이드 없는 프로젝트는 CLAUDE.md의 화면 구조 컨벤션 기준), data 계층 위반(presentation·domain의 data.* import, Repository의 runCatching·메서드별 응답 분기 직접 작성, 중복 방지 장치(멱등성 키·revision) 없는 상태 변경 요청 자동 재전송·게이트웨이 실패를 code 문자열로 판별 — 프로젝트 루트 DATA_LAYER_GUIDE.md 7절 기준, 가이드 없는 프로젝트는 기존 data 코드 패턴 기준), collectAsState 사용, Log.d·println 잔존, XML 레이아웃 추가 등. ` +
       `각 위반은 file/line/severity/description으로 반환. 문제 없으면 빈 배열.\n\n리뷰 대상 파일: ${fileList}`,
   },
 ];

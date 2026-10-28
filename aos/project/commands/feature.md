@@ -26,13 +26,15 @@ description: 신규 기능 스캐폴딩 — presentation(UDF Contract/Route/Scre
 - `<Xxx>Screen.kt` — `state`·`onIntent`만 받는 순수 렌더링 뼈대(내부 private `<Xxx>Content` 위임 가능) + `<Xxx>ScreenPreview` (`@Preview`, 더미 상태)
 - `<Xxx>ViewModel.kt` — `@HiltViewModel` + `StateFlow<UiState>` + `onIntent(intent)` 빈 dispatcher(`// TODO: logic`)
 
-**domain/** (API 연동 예정일 때만):
-- `model/<Xxx>.kt` — 빈 data class + `// TODO`
+**domain/** (API 연동 예정일 때만 — 프로젝트 루트 `DATA_LAYER_GUIDE.md` 1절 구조 기준, 없으면 기존 패턴):
+- `model/<그룹>/<Xxx>.kt` — 빈 data class + `// TODO`
 - `repository/<Xxx>Repository.kt` — 인터페이스 (시그니처는 TODO 주석으로)
+- UseCase는 만들지 않는다 (필요 여부는 `/logic`에서 가이드 6절 기준으로 판단)
 
 **data/** (API 연동 예정일 때만):
 - `repository/<Xxx>RepositoryImpl.kt` — 스텁 구현 + `// TODO: connect-api (3단계)`
 - 기존 DI 모듈에 바인딩 등록 (기존 패턴 그대로)
+- DTO·Api·매퍼는 만들지 않는다 (`/connect-api`의 일)
 
 **navigation/** (요청 시):
 - 기능별 `<Xxx>NavGraph.kt`에 `composable` 목적지 등록(Route 호출 + `onNavigate` → `navController` 처리) — 새 흐름이면 NavGraph 신설 후 `AppNavHost`에서 조립, 기존 흐름이면 해당 NavGraph에 목적지만 추가. `AppNavHost` 본문에 `composable` 직접 작성 금지

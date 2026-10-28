@@ -51,8 +51,9 @@ data class XxxUiState(
 )
 
 sealed interface XxxIntent {
+    data object BackClicked : XxxIntent
     data object SubmitClicked : XxxIntent
-    data object ResultHandled : XxxIntent
+    data class ResultHandled(val result: XxxResult) : XxxIntent
 }
 
 sealed interface XxxResult {
@@ -71,7 +72,7 @@ sealed interface XxxNavigation {
 - `Intent`: 사용자 입력 또는 플랫폼 callback 결과. `Context`, `Activity`, `NavController`를 포함하지 않는다.
 - `Result`: 유실되면 안 되는 처리 결과. 업무 결과가 아니어도 반드시 확인하거나 후속 처리해야 한다면 사용할 수 있다. `NavigateHome`보다 `Completed`, `ExistingMember`처럼 의미를 표현한다.
 - `Navigation`: Route가 NavGraph에 전달하는 이동 요청. ViewModel은 알지 않는다.
-- 중요한 비동기 결과는 UiState에 저장하고 `ResultHandled`로 소비한다.
+- 중요한 비동기 결과는 UiState에 저장하고 `ResultHandled`로 소비한다. `ResultHandled`는 처리한 result를 싣고, ViewModel은 현재 result가 그 값과 같을 때만 지운다 (3절).
 - 관련 상태는 하나의 UiState로 묶되, 독립적이거나 갱신 빈도가 크게 다르면 별도 `StateFlow`를 허용한다.
 
 예를 들어 ViewModel이 로그인 성공을 `NavigateHome`으로 표현하면 UI 목적지를 알게 된다. 대신 `LoginResult.ExistingMember`를 상태로 만들고 Route가 `LoginNavigation.Home`으로 변환하면 업무 결과와 화면 이동 책임을 분리할 수 있다.
@@ -91,6 +92,25 @@ fun XxxRoute(
     viewModel: XxxViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current // androidx.lifecycle.compose.LocalLifecycleOwner
+    // effect가 onNavigate 변경으로 재시작되지 않으므로 최신 콜백을 읽게 한다
+    val currentOnNavigate by rememberUpdatedState(onNavigate)
+
+    // Result 소비 — STARTED 이상에서만 수집해 화면 전환 중이나 백그라운드에서 이동하지 않는다
+    LaunchedEffect(viewModel, lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.uiState
+                .map { it.result }
+                .distinctUntilChanged()
+                .filterNotNull()
+                .collect { result ->
+                    when (result) {
+                        XxxResult.Completed -> currentOnNavigate(XxxNavigation.Next)
+                    }
+                    viewModel.onIntent(XxxIntent.ResultHandled(result))
+                }
+        }
+    }
 
     XxxScreen(
         state = state,
@@ -115,6 +135,12 @@ Route 책임:
 Route에서 Repository를 호출하거나 업무 규칙을 구현하지 않는다.
 
 모든 Intent를 ViewModel에 보낼 필요는 없다. 뒤로가기처럼 UI만으로 결정되는 동작은 Route가 Navigation으로 바로 변환하고, API 호출이나 데이터 검증이 필요한 Intent만 ViewModel로 전달한다.
+
+Result는 `repeatOnLifecycle(STARTED)` 안에서 `uiState`를 수집해 소비한다. Navigation으로 변환한 뒤 같은 블록에서 `ResultHandled(result)`를 보낸다. 화면이 STARTED 아래에 있는 동안 도착한 결과는 상태에 남아 있다가 다시 STARTED가 되면 처리되고, 구성 변경 중에 도착한 결과도 Route가 다시 만들어진 뒤 처리된다.
+
+`LaunchedEffect(state.result)`로 직접 소비하지 않는다. `collectAsStateWithLifecycle()`은 수집만 멈출 뿐 첫 Composition에서 `StateFlow`의 현재 값을 초기값으로 돌려주고, `LaunchedEffect`는 생명주기와 무관하게 Composition 진입 즉시 실행된다. 미처리 result가 남은 화면으로 돌아오면 back stack entry가 STARTED가 되기 전에 이동이 실행될 수 있다.
+
+`distinctUntilChanged`는 다른 UiState 필드만 바뀌어 같은 result가 다시 흘러오는 것을 막는다. `filterNotNull`보다 앞에 둬야 result가 null로 지워진 뒤 같은 값이 다시 생겼을 때도 처리된다. Result는 Navigation으로 바꿀 대상만 다루고, 화면에 계속 보여야 하는 오류 문구 같은 값은 일반 UiState 필드로 둔다.
 
 ### Screen
 
@@ -142,7 +168,7 @@ Screen이 로컬 상태를 가질 수 없는 것은 아니다. UI 생명주기�
 
 ### ViewModel
 
-ViewModel은 화면의 business state holder다. Intent를 받아 Repository 또는 Domain 계층에 업무 처리를 위임하고, 결과를 Screen이 렌더링할 수 있는 UiState로 변환한다.
+ViewModel은 화면의 business state holder다. Intent를 받아 Repository 또는 Domain 계층에 업무 처리를 위임하고, 결과를 Screen이 렌더링할 수 있는 UiState로 변환한다. ViewModel 아래쪽(Repository·UseCase·DTO·에러 처리) 규칙은 프로젝트 루트 `DATA_LAYER_GUIDE.md`를 따른다.
 
 ```kotlin
 @HiltViewModel
@@ -155,11 +181,31 @@ class XxxViewModel @Inject constructor(
     fun onIntent(intent: XxxIntent) {
         when (intent) {
             XxxIntent.SubmitClicked -> submit()
-            XxxIntent.ResultHandled -> clearResult()
+            is XxxIntent.ResultHandled -> clearResult(intent.result)
+            XxxIntent.BackClicked -> Unit // Route가 Navigation으로 바로 변환한다
         }
+    }
+
+    // 처리 중이거나 아직 소비되지 않은 결과가 있으면 무시 — 연타로 같은 요청이 두 번 나가는 것을 막는다
+    private fun submit() {
+        if (_uiState.value.isLoading || _uiState.value.result != null) return
+        _uiState.update { it.copy(isLoading = true) }
+        viewModelScope.launch {
+            when (repository.submit()) {
+                is ApiResult.Success -> _uiState.update { it.copy(isLoading = false, result = XxxResult.Completed) }
+                is ApiResult.Failure -> _uiState.update { it.copy(isLoading = false) } // 오류 표시는 화면 규칙대로
+            }
+        }
+    }
+
+    // Route가 처리한 결과와 같을 때만 지운다 — 처리하는 사이 새로 들어온 결과까지 지우지 않기 위해서다
+    private fun clearResult(handled: XxxResult) {
+        _uiState.update { if (it.result == handled) it.copy(result = null) else it }
     }
 }
 ```
+
+`ResultHandled`가 처리한 값을 싣는 이유는 경합 때문이다. Route가 결과 A를 처리하고 `ResultHandled`를 보내기 전에 ViewModel이 결과 B를 넣으면, 값 없는 `ResultHandled`는 B까지 지운다. 값을 비교해 지우면 B는 남아 다음 `LaunchedEffect`에서 처리된다. 같은 값의 결과가 연속으로 생길 수 있는 화면(예: 같은 `Completed`가 짧은 간격으로 두 번)은 Result에 요청 ID 같은 식별값을 넣어 구분한다.
 
 - 공개 입력은 `onIntent(intent)` 하나로 통일한다.
 - `onIntent()`는 private 함수로 분배하는 얇은 dispatcher다.
@@ -308,6 +354,7 @@ Credential Manager와 소셜 SDK는 Activity 또는 Composable 생명주기를 �
 - ViewModel 또는 Intent에 Android UI 타입 전달
 - 모든 로직을 `onIntent()`의 `when` 안에 구현
 - 중요한 결과를 `Channel` 또는 `SharedFlow`로만 전달
+- Result를 `LaunchedEffect(state.result)`로 직접 소비 (`repeatOnLifecycle(STARTED)` 안에서 수집)
 - AppNavHost 한 파일에 모든 목적지 구현
 - 책임 없는 Contract, Effect, Coordinator 생성
 
@@ -322,7 +369,8 @@ Credential Manager와 소셜 SDK는 Activity 또는 Composable 생명주기를 �
 - [ ] Route가 상태 수집과 플랫폼 UI를 담당하는가?
 - [ ] Route의 이동 요청이 단일 `onNavigate`인가?
 - [ ] 실제 Navigation이 기능별 NavGraph에 있는가?
-- [ ] 중요한 결과가 UiState와 `Handled`로 처리되는가?
+- [ ] 중요한 결과가 UiState와 `Handled`로 처리되고, `ResultHandled`가 처리한 result를 비교해 지우는가?
+- [ ] 처리 중이거나 소비 안 된 결과가 있을 때 같은 요청이 다시 나가지 않는가?
 - [ ] 추가 파일이 실제 기능 특성상 필요한가?
 - [ ] `./gradlew :app:compileDebugKotlin` 통과
 - [ ] `./gradlew :app:ktlintCheck` 통과

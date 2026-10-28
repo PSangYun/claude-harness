@@ -12,6 +12,7 @@ aos/
 │   ├── rules/android.md                      # Android 세부 규칙 — paths: **/*.kt, **/*.kts 일 때만 자동 로드
 │   ├── references/figma-aos-common-guide.md  # Figma→aos-common 컴포넌트·폰트·색상·Area 토큰 매핑 (피그마 작업 전 읽기)
 │   ├── templates/UDF_ARCHITECTURE_GUIDE.md   # 신규 AOS 프로젝트 루트에 씨딩하는 UDF 가이드 (/harness-init Phase 2)
+│   ├── templates/DATA_LAYER_GUIDE.md         # 같은 조건으로 씨딩하는 data/domain 가이드 (Repository·DTO·safeApiCall·재시도·UseCase 기준)
 │   ├── settings.json  #   SessionStart(inject-model-rules) 훅 + env + subagentPromptCacheTtl — Stop 훅 없음 (아래 정책)
 │   ├── prompts/       #   모델별 운영 규칙 프롬프트 8종 (OPUS·SONNET 각 4종) — 기본은 *_COMPACT_PROMPT 주입
 │   ├── hooks/         #   inject-model-rules.js 만 (stop-gate.js 글로벌 사본 없음)
@@ -43,13 +44,21 @@ aos/
 ## 정본과 씨딩 사본
 
 - 글로벌 `~/.claude/commands/`에는 `harness-init`만 둔다 — maintain·review-loop를 글로벌과 프로젝트 양쪽에 두면 스킬 목록에 이중 노출되기 때문.
-- **정본은 `aos/project/{commands,workflows,hooks,templates}`** 다. `install.sh aos`가 commands·workflows를 `~/.claude/templates/{commands,workflows}/`로, templates의 파일(.worktreeinclude·ci.yml·stop-gate.json·gitattributes/gitignore 블록·lint-setup.md·.editorconfig)을 `~/.claude/templates/`로 복사하고, `/harness-init` Phase 3가 거기서 각 프로젝트로 씨딩한다. `global/templates/`에는 UDF 가이드만 둔다 (같은 파일을 두 곳에 두던 구조는 드리프트의 원인이라 제거).
+- **정본은 `aos/project/{commands,workflows,hooks,templates}`** 다. `install.sh aos`가 commands·workflows를 `~/.claude/templates/{commands,workflows}/`로, templates의 파일(.worktreeinclude·ci.yml·stop-gate.json·gitattributes/gitignore 블록·lint-setup.md·.editorconfig)을 `~/.claude/templates/`로 복사하고, `/harness-init` Phase 3가 거기서 각 프로젝트로 씨딩한다. `global/templates/`에는 아키텍처 가이드 2종(UDF·data 계층)만 둔다 (같은 파일을 두 곳에 두던 구조는 드리프트의 원인이라 제거).
 - 역반영 규칙: 프로젝트 사본이 정본과 다르면 개선분을 **이 저장소의 project/에 먼저 반영한 뒤** 각 프로젝트로 재씨딩 — `/maintain` 루브릭의 자산 동기화 항목이 드리프트를 감지한다 (줄바꿈 정규화 비교 `diff --strip-trailing-cr` 필수).
 
 ## UDF 아키텍처 (ParkGolf 기준)
 
 - 화면 구조는 `Contract(UiState/Intent/Navigation)` / `Route(onNavigate 단일)` / `Screen(state·onIntent만)` / `ViewModel(onIntent 단일 dispatcher)` 4파일. 가이드 원본은 `global/templates/UDF_ARCHITECTURE_GUIDE.md`.
 - `/harness-init`이 **신규 시작 프로젝트에만** 프로젝트 루트로 씨딩한다 (기존/clone 프로젝트는 기존 아키텍처 유지). `/feature`·`/design`·`/logic` DoD, code-reviewer 🟡 항목, review-and-fix convention 리뷰가 가이드 7절 금지 패턴을 기준으로 판정한다. 가이드가 없는 프로젝트에서는 프로젝트 CLAUDE.md의 화면 구조 컨벤션이 기준.
+
+## Data · Domain 계층 (ParkGolf 구조 + 보완)
+
+- 원본은 `global/templates/DATA_LAYER_GUIDE.md`. UDF 가이드와 같은 조건(신규 시작 프로젝트만)으로 프로젝트 루트에 씨딩한다. 절 번호는 UDF 가이드와 맞춰 7절 금지 패턴·8절 체크리스트다.
+- 구조는 ParkGolf 그대로: `domain/{model,repository}` 인터페이스 + `data/{api,local,model,repository}` 구현, `ApiResult`, Hilt `@Binds`, 단일 모듈. UseCase·DataSource는 기본 계층이 아니고 6절 조건일 때만 만든다.
+- ParkGolf에서 실측된 문제를 금지 패턴으로 넣었다: domain·presentation의 `data.*` import(DTO 누출), Repository마다 반복된 `runCatching` 응답 분기(`CancellationException` 삼킴 — `safeApiCall` 단일 헬퍼로 대체), RepositoryImpl 안의 private 매퍼(`data/mapper/`로 분리).
+- ParkGolf `NetworkRetry`의 재시도 정책(조회는 재시도, 상태 변경 POST는 반영 여부 확인 후 1회 재전송)을 5절로 일반화했다. ParkGolf는 점수 제출에 `expectedRevision`을 실어 서버가 중복을 막았기 때문에 안전했다. 가이드는 이 전제를 명시해, 멱등성 키나 revision 같은 서버 중복 방지 장치가 있을 때만 재전송하고 반영 확인 결과를 `Applied`/`NotApplied`/`Unknown`으로 나눈다. 게이트웨이 실패는 `code` 문자열이 아니라 `httpStatus`로 판별한다.
+- `/feature`·`/logic`·`/connect-api` DoD, code-reviewer, review-and-fix convention 리뷰가 이 가이드 7절을 기준으로 판정한다.
 
 ## stop-gate v2 (v1 대비)
 

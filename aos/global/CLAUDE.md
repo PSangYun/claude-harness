@@ -49,7 +49,7 @@
 ## 온보딩
 
 - 새 프로젝트나 하네스 미적용 프로젝트를 만나면 `/harness-init` 실행을 제안한다.
-- **신규 시작 AOS 프로젝트**는 `/harness-init` 시 `~/.claude/templates/UDF_ARCHITECTURE_GUIDE.md`를 프로젝트 루트로 씨딩해 UDF 아키텍처(Contract/Route/Screen/ViewModel)를 적용한다. 기존/clone 프로젝트에는 적용하지 않는다 — 기존 아키텍처를 따른다.
+- **신규 시작 AOS 프로젝트**는 `/harness-init` 시 `~/.claude/templates/UDF_ARCHITECTURE_GUIDE.md`·`DATA_LAYER_GUIDE.md`를 프로젝트 루트로 씨딩해 UDF 아키텍처(Contract/Route/Screen/ViewModel)와 data/domain 규칙(domain 인터페이스 + data 구현, UseCase 선택)을 적용한다. 기존/clone 프로젝트에는 적용하지 않는다 — 기존 아키텍처를 따른다.
 
 # 코드 리뷰 작성 방식
 

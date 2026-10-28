@@ -14,9 +14,13 @@ description: 3단계 — TODO 스텁에 실제 API 연결 (Retrofit 인터페이
 
 ## Phase B: data 레이어 구현 (기존 패턴 준수)
 
+기준 문서: 프로젝트 루트 `DATA_LAYER_GUIDE.md`(있으면 2~5절 규칙·7절 금지 패턴). 가이드가 없는 기존 프로젝트는 기존 data 코드의 패턴을 그대로 따른다.
+
 - `data/api/`의 기존 Retrofit 인터페이스 스타일을 먼저 읽고 동일하게 작성 (인증 헤더·suspend 시그니처·에러 래핑 방식)
-- 요청/응답 모델은 `data/model/`에 `@Serializable`로 — 명세의 필드명/nullable 여부 그대로 (임의 생략 금지), domain 모델과 매핑 함수 작성
-- repository 구현(`data/repository/`)이 domain 인터페이스를 구현, Hilt DI 모듈에 바인딩 등록
+- 요청/응답 모델은 `data/model/{request,response}/`에 `@Keep @Serializable`로 — 명세의 필드명/nullable 여부 그대로 (임의 생략 금지). DTO → domain 매핑은 `data/mapper/`의 `toDomain()` 확장 함수로 (가이드 없는 프로젝트는 기존 매퍼 위치)
+- repository 구현(`data/repository/`)이 domain 인터페이스를 구현, Hilt DI 모듈에 바인딩 등록. 인터페이스 시그니처에 DTO·`Response<T>`가 나타나지 않게 한다
+- API 호출은 공통 헬퍼(`safeApiCall` 등 — 없으면 가이드 3절대로 `data/repository/extension/`에 먼저 만든다)를 거친다. 메서드마다 `runCatching`으로 감싸 응답 분기를 직접 쓰지 않는다 (`CancellationException` 삼킴)
+- 상태를 바꾸는 요청은 서버 중복 방지 장치(멱등성 키·`expectedRevision` 등)가 있을 때만 `sendReconciled`로 확인 후 재전송한다. 없으면 자동 재전송하지 않고 `isResultUnknown` 실패를 ViewModel에 넘겨 "처리 결과 확인 필요"로 보여준다. 장치 유무가 명세에 없으면 사용자에게 확인한다 (가이드 5절 — 조회는 `retryOnNetworkError`)
 - 베이스 URL·키는 `BuildConfig`/`local.properties` 주입 방식 사용 — **하드코딩 금지**
 
 ## Phase C: VM 연결 + 상태 처리
@@ -39,6 +43,8 @@ description: 3단계 — TODO 스텁에 실제 API 연결 (Retrofit 인터페이
 4. 로딩·에러 상태 처리 존재 (각 호출 지점별, uiState 반영)
 5. 컴파일 성공 (`compileDebugKotlin` 실행 결과)
 6. URL·키·토큰 하드코딩 0건 (BuildConfig/local.properties 주입)
+7. 레이어 방향 준수 — 신규·변경 파일 중 domain·presentation에 `data.*` import 0건, domain에 `android.*` import 0건 (`grep` 결과 근거)
+8. 신규 API 호출이 전부 공통 헬퍼를 거치고 Repository에 `runCatching` 0건 (`DATA_LAYER_GUIDE.md`가 없는 프로젝트는 기존 에러 래핑 방식과 일치하는지로 판정)
 
 > **완료 선언 전 checker 서브에이전트의 PASS 판정 필수** (maker/checker 분리 — 글로벌 규약). 런타임 확인은 smoke 에이전트(기기 연결 시 빌드+실행, 없으면 `ran:false`) 결과를 checker에 전달한다.
 
