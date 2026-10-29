@@ -32,21 +32,32 @@ install_dir() { # $1=원본 디렉토리  $2=대상 디렉토리
   done
 }
 
+# 단일 파일 복사 — install_dir과 같은 백업 규칙
+install_file() { # $1=원본 파일  $2=대상 파일
+  [ -f "$1" ] || return 0
+  mkdir -p "$(dirname "$2")"
+  [ -f "$2" ] && ! cmp -s "$1" "$2" && cp "$2" "$2.bak-$STAMP"
+  cp "$1" "$2"
+}
+
 # 1. 글로벌 자산 복사: hooks·commands·agents + (플랫폼에 있으면) prompts·rules·references·templates
 for d in hooks commands agents prompts rules references templates templates/commands templates/workflows; do
   install_dir "$SRC/$d" "$DST/$d"
 done
 echo "✅ hooks / commands / agents (+ 플랫폼에 있으면 prompts·rules·references·templates) 설치"
 
-# 1-1. aos: 프로젝트 자산(project/commands·workflows·templates)이 정본이고, ~/.claude/templates/ 는 그 씨딩 사본이다.
-#      /harness-init Phase 3가 ~/.claude/templates/{commands,workflows}/ 와 ~/.claude/templates/ 의 파일
+# 1-1. aos: 프로젝트 자산(project/commands·workflows·hooks·settings.json·templates)이 정본이고, ~/.claude/templates/ 는 그 씨딩 사본이다.
+#      /harness-init Phase 3가 ~/.claude/templates/{commands,workflows,hooks}/ · templates/settings.json 과 ~/.claude/templates/ 의 파일
 #      (.worktreeinclude·ci.yml·stop-gate.json·gitattributes/gitignore 블록·lint-setup.md·.editorconfig)에서 각 프로젝트로 씨딩한다.
+#      글로벌에는 stop-gate.js 활성 사본이 없으므로 templates/hooks/ 가 프로젝트 stop-gate 갱신의 유일한 원본이다.
 #      (web/ios는 maintain·review-loop를 글로벌 commands/ 에 활성 상태로 두므로 해당 없음)
 if [ "$P" = "aos" ] && [ -n "$PROJ" ]; then
   install_dir "$PROJ/commands" "$DST/templates/commands"
   install_dir "$PROJ/workflows" "$DST/templates/workflows"
+  install_dir "$PROJ/hooks" "$DST/templates/hooks"
+  install_file "$PROJ/settings.json" "$DST/templates/settings.json"
   install_dir "$PROJ/templates" "$DST/templates"
-  echo "✅ templates/ 씨딩 원본 갱신 — commands·workflows·프로젝트 템플릿 파일 (정본: $P/project/)"
+  echo "✅ templates/ 씨딩 원본 갱신 — commands·workflows·hooks(stop-gate)·settings.json·프로젝트 템플릿 파일 (정본: $P/project/)"
 fi
 
 # 1-2. aos는 글로벌 Stop 훅을 두지 않는다 — 이전 설치가 남긴 사본이 있으면 안내만 (삭제는 사용자 판단)
