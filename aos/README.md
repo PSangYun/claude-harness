@@ -50,7 +50,7 @@ aos/
 ## 정본과 씨딩 사본
 
 - 글로벌 `~/.claude/commands/`에는 `harness-init`만 둔다 — maintain·review-loop를 글로벌과 프로젝트 양쪽에 두면 스킬 목록에 이중 노출되기 때문.
-- **정본은 `aos/project/{commands,workflows,hooks,templates}`** 다. `install.sh aos`가 commands·workflows를 `~/.claude/templates/{commands,workflows}/`로, templates의 파일(.worktreeinclude·ci.yml·stop-gate.json·gitattributes/gitignore 블록·lint-setup.md·.editorconfig)을 `~/.claude/templates/`로 복사하고, `/harness-init` Phase 3가 거기서 각 프로젝트로 씨딩한다. `global/templates/`에는 아키텍처 가이드 2종(UDF·data 계층)만 둔다 (같은 파일을 두 곳에 두던 구조는 드리프트의 원인이라 제거).
+- **정본은 `aos/project/{commands,workflows,hooks,templates}`** 다. `install.sh aos`가 commands·workflows·hooks를 `~/.claude/templates/{commands,workflows,hooks}/`로, settings.json을 `~/.claude/templates/settings.json`으로, templates의 파일(.worktreeinclude·ci.yml·stop-gate.json·gitattributes/gitignore 블록·lint-setup.md·.editorconfig)을 `~/.claude/templates/`로 복사하고, `/harness-init` Phase 3가 거기서 각 프로젝트로 씨딩한다. `global/templates/`에는 아키텍처 가이드 2종(UDF·data 계층)만 둔다 (같은 파일을 두 곳에 두던 구조는 드리프트의 원인이라 제거).
 - 역반영 규칙: 프로젝트 사본이 정본과 다르면 개선분을 **이 저장소의 project/에 먼저 반영한 뒤** 각 프로젝트로 재씨딩 — `/maintain` 루브릭의 자산 동기화 항목이 드리프트를 감지한다 (줄바꿈 정규화 비교 `diff --strip-trailing-cr` 필수).
 
 ## UDF 아키텍처
