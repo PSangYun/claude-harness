@@ -1,4 +1,17 @@
-# 팀별 Claude Code 하네스 (Web / iOS / AOS)
+# 팀별 AI 하네스 (Web / iOS / AOS)
+
+## Codex 버전
+
+Codex용 배포 패키지는 [`codex/`](codex/README.md)에 있다. `AGENTS.md`·프로젝트 Skills·명시 검증 스크립트로 구성하며 Claude 전용 훅과 Workflow DSL을 사용하지 않는다.
+
+```powershell
+node codex/install.cjs aos --project "C:\Projects\MyApp" --dry-run
+node codex/install.cjs aos --project "C:\Projects\MyApp"
+```
+
+신규 AOS 앱의 UDF·Data 가이드 씨딩은 `--new-project`, 공통 라이브러리는 `--kind library`를 사용한다. Web·iOS도 지원한다. 상세 설치·사용·검증은 [Codex 안내](codex/README.md)를 따른다.
+
+아래는 기존 Claude Code 패키지의 설치·운영 안내다.
 
 웹팀에서 검증된 루프 엔지니어링 하네스(maker/checker 분리 + stop-gate 결정적 게이트 + 유지보수 루프)를
 세 플랫폼 팀에 맞게 변환한 배포 패키지. 실제 저장소 조사(2026-07-03, ios-common·ParkGolfIOS·aos-common·ParkGolfAOS·react-common·parkgolf-association-admin·react-boilerplate·bokjiportal)를 기반으로 각 팀의 **실존하는 검증 명령**에 맞춰져 있다.
