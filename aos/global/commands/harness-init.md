@@ -38,7 +38,7 @@ description: 프로젝트를 루프 하네스에 편입 — CLAUDE.md 생성/검
 누락 자산을 확인하고 동기화를 제안:
 - `.claude/agents/`: checker·smoke·code-reviewer·test-writer (글로벌 `~/.claude/agents/` 사본 — 커맨드/워크플로우가 이들을 호출하므로 프로젝트에 함께 있어야 환경 독립적으로 동작)
 - `.claude/hooks/stop-gate.js` — 정본은 하네스 저장소의 `aos/project/hooks/stop-gate.js`, 씨딩 소스는 `~/.claude/templates/hooks/stop-gate.js` (글로벌 `~/.claude/hooks/`에는 활성 사본이 없다. 그곳에 남은 stop-gate.js는 이전 설치의 잔재라 비교 기준으로 쓰지 않는다)
-- `.claude/settings.json` — 씨딩 소스는 `~/.claude/templates/settings.json`. 없으면 복사, 있으면 **Stop 훅 항목과 빠진 permissions만 병합**하고 프로젝트가 이미 정한 값은 보존한다 (훅 명령은 템플릿대로 `${CLAUDE_PROJECT_DIR}` 기준 경로로 맞춘다). **글로벌 settings.json에는 Stop 훅을 등록하지 않는다** (프로젝트와 이중 등록되어 게이트가 턴마다 2회 돌게 됨)
+- `.claude/settings.json` — 씨딩 소스는 `~/.claude/templates/settings.json`. 없으면 복사, 있으면 **Stop 훅 항목과 빠진 permissions만 병합**하고 프로젝트가 이미 정한 값은 보존한다 (훅 명령은 템플릿의 `command` 문자열을 그대로 복사한다 — `CLAUDE_PROJECT_DIR` 환경변수 기준 경로라서 절대 경로로 바꾸지 않는다). **글로벌 settings.json에는 Stop 훅을 등록하지 않는다** (프로젝트와 이중 등록되어 게이트가 턴마다 2회 돌게 됨)
 - 템플릿 원본이 없으면(`~/.claude/templates/hooks/` 부재) 하네스 저장소에서 `./install.sh aos`를 다시 실행하라고 안내하고 이 두 항목은 건너뛴다
 - `.claude/commands/`: maintain·review-loop (+ 프로젝트 유형별 구현 커맨드) — 씨딩 소스는 `~/.claude/templates/commands/`. 글로벌 `~/.claude/commands/`에 같은 이름을 두면 스킬 목록에 이중 노출되므로 **활성 커맨드는 프로젝트에만** 둔다
 - `.claude/workflows/`: review-and-fix.js·implement-feature.js — 씨딩 소스는 `~/.claude/templates/workflows/`
